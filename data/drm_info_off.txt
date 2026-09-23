@@ -1,0 +1,3914 @@
+Node: /dev/dri/card1
+├───Driver: i915 (Intel Graphics) version 1.6.0 (0)
+│   ├───DRM_CLIENT_CAP_STEREO_3D supported
+│   ├───DRM_CLIENT_CAP_UNIVERSAL_PLANES supported
+│   ├───DRM_CLIENT_CAP_ATOMIC supported
+│   ├───DRM_CLIENT_CAP_ASPECT_RATIO supported
+│   ├───DRM_CLIENT_CAP_WRITEBACK_CONNECTORS supported
+│   ├───DRM_CAP_DUMB_BUFFER = 1
+│   ├───DRM_CAP_VBLANK_HIGH_CRTC = 1
+│   ├───DRM_CAP_DUMB_PREFERRED_DEPTH = 24
+│   ├───DRM_CAP_DUMB_PREFER_SHADOW = 1
+│   ├───DRM_CAP_PRIME = 3
+│   ├───DRM_CAP_TIMESTAMP_MONOTONIC = 1
+│   ├───DRM_CAP_ASYNC_PAGE_FLIP = 1
+│   ├───DRM_CAP_CURSOR_WIDTH = 256
+│   ├───DRM_CAP_CURSOR_HEIGHT = 256
+│   ├───DRM_CAP_ADDFB2_MODIFIERS = 1
+│   ├───DRM_CAP_PAGE_FLIP_TARGET = 0
+│   ├───DRM_CAP_CRTC_IN_VBLANK_EVENT = 1
+│   ├───DRM_CAP_SYNCOBJ = 1
+│   └───DRM_CAP_SYNCOBJ_TIMELINE = 1
+├───Device: PCI 8086:a7a1 Intel Corporation Raptor Lake-P [Iris Xe Graphics]
+│   └───Available nodes: primary, render
+├───Framebuffer size
+│   ├───Width: [0, 16384]
+│   └───Height: [0, 16384]
+├───Connectors
+│   ├───Connector 0
+│   │   ├───Object ID: 508
+│   │   ├───Type: eDP
+│   │   ├───Status: connected
+│   │   ├───Physical size: 290x190 mm
+│   │   ├───Subpixel: unknown
+│   │   ├───Encoders: {0}
+│   │   ├───Modes
+│   │   │   └───2880x1800@60.00 preferred driver phsync nvsync 
+│   │   └───Properties
+│   │       ├───"EDID" (immutable): blob = 509
+│   │       ├───"DPMS": enum {On, Standby, Suspend, Off} = Off
+│   │       ├───"link-status": enum {Good, Bad} = Good
+│   │       ├───"non-desktop" (immutable): range [0, 1] = 0
+│   │       ├───"TILE" (immutable): blob = 0
+│   │       ├───"CRTC_ID" (atomic): object CRTC = 0
+│   │       ├───"scaling mode": enum {Full, Center, Full aspect} = Full aspect
+│   │       ├───"panel orientation" (immutable): enum {Normal, Upside Down, Left Side Up, Right Side Up} = Normal
+│   │       ├───"Broadcast RGB": enum {Automatic, Full, Limited 16:235} = Full
+│   │       ├───"max bpc": range [6, 12] = 12
+│   │       ├───"Colorspace": enum {Default, BT709_YCC, XVYCC_601, XVYCC_709, SYCC_601, opYCC_601, opRGB, BT2020_CYCC, BT2020_RGB, BT2020_YCC, DCI-P3_RGB_D65, RGB_WIDE_FIXED, RGB_WIDE_FLOAT, BT601_YCC} = BT2020_RGB
+│   │       ├───"HDR_OUTPUT_METADATA": blob = 555
+│   │       │   ├───Type: Static Metadata Type 1
+│   │       │   ├───EOTF: SMPTE ST 2084 (PQ)
+│   │       │   ├───Display primaries:
+│   │       │   │   ├───Red: (0.6797, 0.3203)
+│   │       │   │   ├───Green: (0.2373, 0.7227)
+│   │       │   │   └───Blue: (0.1396, 0.0498)
+│   │       │   ├───White point: (0.3125, 0.3291)
+│   │       │   ├───Max display mastering luminance: 400 cd/m²
+│   │       │   ├───Min display mastering luminance: 0.0046 cd/m²
+│   │       │   ├───Max content light level: 400 cd/m²
+│   │       │   └───Max frame average light level: 400 cd/m²
+│   │       └───"vrr_capable" (immutable): range [0, 1] = 0
+│   ├───Connector 1
+│   │   ├───Object ID: 517
+│   │   ├───Type: HDMI-A
+│   │   ├───Status: disconnected
+│   │   ├───Encoders: {1}
+│   │   └───Properties
+│   │       ├───"EDID" (immutable): blob = 0
+│   │       ├───"DPMS": enum {On, Standby, Suspend, Off} = Off
+│   │       ├───"link-status": enum {Good, Bad} = Good
+│   │       ├───"non-desktop" (immutable): range [0, 1] = 0
+│   │       ├───"TILE" (immutable): blob = 0
+│   │       ├───"CRTC_ID" (atomic): object CRTC = 0
+│   │       ├───"audio": enum {force-dvi, off, auto, on} = auto
+│   │       ├───"Broadcast RGB": enum {Automatic, Full, Limited 16:235} = Automatic
+│   │       ├───"aspect ratio": enum {Automatic, 4:3, 16:9} = Automatic
+│   │       ├───"Colorspace": enum {Default, SMPTE_170M_YCC, BT709_YCC, XVYCC_601, XVYCC_709, SYCC_601, opYCC_601, opRGB, BT2020_CYCC, BT2020_RGB, BT2020_YCC, DCI-P3_RGB_D65, DCI-P3_RGB_Theater} = Default
+│   │       ├───"content type": enum {No Data, Graphics, Photo, Cinema, Game} = No Data
+│   │       ├───"HDR_OUTPUT_METADATA": blob = 0
+│   │       ├───"max bpc": range [8, 12] = 12
+│   │       ├───"Content Protection": enum {Undesired, Desired, Enabled} = Undesired
+│   │       └───"HDCP Content Type": enum {HDCP Type0, HDCP Type1} = HDCP Type0
+│   ├───Connector 2
+│   │   ├───Object ID: 526
+│   │   ├───Type: DisplayPort
+│   │   ├───Status: disconnected
+│   │   ├───Encoders: {2}
+│   │   └───Properties
+│   │       ├───"EDID" (immutable): blob = 0
+│   │       ├───"DPMS": enum {On, Standby, Suspend, Off} = Off
+│   │       ├───"link-status": enum {Good, Bad} = Good
+│   │       ├───"non-desktop" (immutable): range [0, 1] = 0
+│   │       ├───"TILE" (immutable): blob = 0
+│   │       ├───"CRTC_ID" (atomic): object CRTC = 0
+│   │       ├───"subconnector" (immutable): enum {Unknown, VGA, DVI-D, HDMI, DP, Wireless, Native} = Unknown
+│   │       ├───"audio": enum {force-dvi, off, auto, on} = auto
+│   │       ├───"Broadcast RGB": enum {Automatic, Full, Limited 16:235} = Full
+│   │       ├───"max bpc": range [6, 12] = 10
+│   │       ├───"Colorspace": enum {Default, BT709_YCC, XVYCC_601, XVYCC_709, SYCC_601, opYCC_601, opRGB, BT2020_CYCC, BT2020_RGB, BT2020_YCC, DCI-P3_RGB_D65, RGB_WIDE_FIXED, RGB_WIDE_FLOAT, BT601_YCC} = BT2020_RGB
+│   │       ├───"HDR_OUTPUT_METADATA": blob = 560
+│   │       │   ├───Type: Static Metadata Type 1
+│   │       │   ├───EOTF: SMPTE ST 2084 (PQ)
+│   │       │   ├───Display primaries:
+│   │       │   │   ├───Red: (0.6406, 0.3301)
+│   │       │   │   ├───Green: (0.3008, 0.6006)
+│   │       │   │   └───Blue: (0.1504, 0.0605)
+│   │       │   ├───White point: (0.2803, 0.2900)
+│   │       │   ├───Max display mastering luminance: 0 cd/m²
+│   │       │   ├───Min display mastering luminance: 0.0000 cd/m²
+│   │       │   ├───Max content light level: 0 cd/m²
+│   │       │   └───Max frame average light level: 0 cd/m²
+│   │       ├───"vrr_capable" (immutable): range [0, 1] = 0
+│   │       ├───"Content Protection": enum {Undesired, Desired, Enabled} = Undesired
+│   │       └───"HDCP Content Type": enum {HDCP Type0, HDCP Type1} = HDCP Type0
+│   └───Connector 3
+│       ├───Object ID: 536
+│       ├───Type: DisplayPort
+│       ├───Status: connected
+│       ├───Physical size: 890x500 mm
+│       ├───Subpixel: unknown
+│       ├───Encoders: {7}
+│       ├───Modes
+│       │   ├───3840x2160@60.00 preferred driver phsync pvsync 
+│       │   ├───4096x2160@60.00 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@59.94 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@50.00 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@30.00 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@29.97 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@25.00 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@24.00 driver phsync pvsync 256:135 
+│       │   ├───4096x2160@23.98 driver phsync pvsync 256:135 
+│       │   ├───3840x2160@60.00 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@59.94 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@50.00 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@30.00 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@29.97 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@25.00 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@24.00 driver phsync pvsync 16:9 
+│       │   ├───3840x2160@23.98 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@60.00 driver phsync pvsync 
+│       │   ├───1920x1080@60.00 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@59.94 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@50.00 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@30.00 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@29.97 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@25.00 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@24.00 driver phsync pvsync 16:9 
+│       │   ├───1920x1080@23.98 driver phsync pvsync 16:9 
+│       │   ├───1680x1050@59.88 driver phsync nvsync 
+│       │   ├───1600x900@60.00 driver phsync pvsync 
+│       │   ├───1280x1024@75.03 driver phsync pvsync 
+│       │   ├───1280x1024@60.02 driver phsync pvsync 
+│       │   ├───1440x900@59.90 driver phsync nvsync 
+│       │   ├───1366x768@59.79 driver phsync pvsync 
+│       │   ├───1280x800@59.91 driver phsync nvsync 
+│       │   ├───1152x864@75.00 driver phsync pvsync 
+│       │   ├───1280x720@60.00 driver phsync pvsync 
+│       │   ├───1280x720@60.00 driver phsync pvsync 16:9 
+│       │   ├───1280x720@59.94 driver phsync pvsync 16:9 
+│       │   ├───1280x720@50.00 driver phsync pvsync 16:9 
+│       │   ├───1024x768@75.03 driver phsync pvsync 
+│       │   ├───1024x768@70.07 driver nhsync nvsync 
+│       │   ├───1024x768@60.00 driver nhsync nvsync 
+│       │   ├───832x624@74.55 driver nhsync nvsync 
+│       │   ├───800x600@75.00 driver phsync pvsync 
+│       │   ├───800x600@72.19 driver phsync pvsync 
+│       │   ├───800x600@60.32 driver phsync pvsync 
+│       │   ├───720x576@50.00 driver nhsync nvsync 16:9 
+│       │   ├───720x480@60.00 driver nhsync nvsync 16:9 
+│       │   ├───720x480@59.94 driver nhsync nvsync 16:9 
+│       │   ├───640x480@75.00 driver nhsync nvsync 
+│       │   ├───640x480@72.81 driver nhsync nvsync 
+│       │   ├───640x480@66.67 driver nhsync nvsync 
+│       │   ├───640x480@60.00 driver nhsync nvsync 4:3 
+│       │   ├───640x480@59.94 driver nhsync nvsync 
+│       │   └───720x400@70.08 driver nhsync pvsync 
+│       └───Properties
+│           ├───"EDID" (immutable): blob = 546
+│           ├───"DPMS": enum {On, Standby, Suspend, Off} = Off
+│           ├───"link-status": enum {Good, Bad} = Good
+│           ├───"non-desktop" (immutable): range [0, 1] = 0
+│           ├───"TILE" (immutable): blob = 0
+│           ├───"CRTC_ID" (atomic): object CRTC = 0
+│           ├───"subconnector" (immutable): enum {Unknown, VGA, DVI-D, HDMI, DP, Wireless, Native} = HDMI
+│           ├───"audio": enum {force-dvi, off, auto, on} = auto
+│           ├───"Broadcast RGB": enum {Automatic, Full, Limited 16:235} = Full
+│           ├───"max bpc": range [6, 12] = 10
+│           ├───"Colorspace": enum {Default, BT709_YCC, XVYCC_601, XVYCC_709, SYCC_601, opYCC_601, opRGB, BT2020_CYCC, BT2020_RGB, BT2020_YCC, DCI-P3_RGB_D65, RGB_WIDE_FIXED, RGB_WIDE_FLOAT, BT601_YCC} = BT2020_RGB
+│           ├───"HDR_OUTPUT_METADATA": blob = 544
+│           │   ├───Type: Static Metadata Type 1
+│           │   ├───EOTF: SMPTE ST 2084 (PQ)
+│           │   ├───Display primaries:
+│           │   │   ├───Red: (0.6406, 0.3301)
+│           │   │   ├───Green: (0.3008, 0.6006)
+│           │   │   └───Blue: (0.1504, 0.0605)
+│           │   ├───White point: (0.2803, 0.2900)
+│           │   ├───Max display mastering luminance: 0 cd/m²
+│           │   ├───Min display mastering luminance: 0.0000 cd/m²
+│           │   ├───Max content light level: 0 cd/m²
+│           │   └───Max frame average light level: 0 cd/m²
+│           ├───"vrr_capable" (immutable): range [0, 1] = 0
+│           ├───"Content Protection": enum {Undesired, Desired, Enabled} = Undesired
+│           └───"HDCP Content Type": enum {HDCP Type0, HDCP Type1} = HDCP Type0
+├───Encoders
+│   ├───Encoder 0
+│   │   ├───Object ID: 507
+│   │   ├───Type: TMDS
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {0}
+│   ├───Encoder 1
+│   │   ├───Object ID: 516
+│   │   ├───Type: TMDS
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {1}
+│   ├───Encoder 2
+│   │   ├───Object ID: 525
+│   │   ├───Type: TMDS
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {2}
+│   ├───Encoder 3
+│   │   ├───Object ID: 527
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {3}
+│   ├───Encoder 4
+│   │   ├───Object ID: 528
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {4}
+│   ├───Encoder 5
+│   │   ├───Object ID: 529
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {5}
+│   ├───Encoder 6
+│   │   ├───Object ID: 530
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {6}
+│   ├───Encoder 7
+│   │   ├───Object ID: 535
+│   │   ├───Type: TMDS
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {7}
+│   ├───Encoder 8
+│   │   ├───Object ID: 537
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {8}
+│   ├───Encoder 9
+│   │   ├───Object ID: 538
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {9}
+│   ├───Encoder 10
+│   │   ├───Object ID: 539
+│   │   ├───Type: DP MST
+│   │   ├───CRTCS: {0, 1, 2, 3}
+│   │   └───Clones: {10}
+│   └───Encoder 11
+│       ├───Object ID: 540
+│       ├───Type: DP MST
+│       ├───CRTCS: {0, 1, 2, 3}
+│       └───Clones: {11}
+├───CRTCs
+│   ├───CRTC 0
+│   │   ├───Object ID: 151
+│   │   ├───Legacy info
+│   │   │   └───Gamma size: 256
+│   │   └───Properties
+│   │       ├───"ACTIVE" (atomic): range [0, 1] = 0
+│   │       ├───"MODE_ID" (atomic): blob = 0
+│   │       ├───"OUT_FENCE_PTR" (atomic): range [0, UINT64_MAX] = 0
+│   │       ├───"VRR_ENABLED": range [0, 1] = 0
+│   │       ├───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+│   │       ├───"BACKGROUND_COLOR": range [0, UINT64_MAX] = 18446462598732840960
+│   │       ├───"DEGAMMA_LUT": blob = 0
+│   │       ├───"DEGAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 129
+│   │       ├───"CTM": blob = 0
+│   │       ├───"GAMMA_LUT": blob = 0
+│   │       └───"GAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 1024
+│   ├───CRTC 1
+│   │   ├───Object ID: 269
+│   │   ├───Legacy info
+│   │   │   └───Gamma size: 256
+│   │   └───Properties
+│   │       ├───"ACTIVE" (atomic): range [0, 1] = 0
+│   │       ├───"MODE_ID" (atomic): blob = 0
+│   │       ├───"OUT_FENCE_PTR" (atomic): range [0, UINT64_MAX] = 0
+│   │       ├───"VRR_ENABLED": range [0, 1] = 0
+│   │       ├───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+│   │       ├───"BACKGROUND_COLOR": range [0, UINT64_MAX] = 18446462598732840960
+│   │       ├───"DEGAMMA_LUT": blob = 0
+│   │       ├───"DEGAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 129
+│   │       ├───"CTM": blob = 0
+│   │       ├───"GAMMA_LUT": blob = 550
+│   │       └───"GAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 1024
+│   ├───CRTC 2
+│   │   ├───Object ID: 387
+│   │   ├───Legacy info
+│   │   │   └───Gamma size: 256
+│   │   └───Properties
+│   │       ├───"ACTIVE" (atomic): range [0, 1] = 0
+│   │       ├───"MODE_ID" (atomic): blob = 0
+│   │       ├───"OUT_FENCE_PTR" (atomic): range [0, UINT64_MAX] = 0
+│   │       ├───"VRR_ENABLED": range [0, 1] = 0
+│   │       ├───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+│   │       ├───"BACKGROUND_COLOR": range [0, UINT64_MAX] = 18446462598732840960
+│   │       ├───"DEGAMMA_LUT": blob = 0
+│   │       ├───"DEGAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 129
+│   │       ├───"CTM": blob = 0
+│   │       ├───"GAMMA_LUT": blob = 0
+│   │       └───"GAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 1024
+│   └───CRTC 3
+│       ├───Object ID: 505
+│       ├───Legacy info
+│       │   └───Gamma size: 256
+│       └───Properties
+│           ├───"ACTIVE" (atomic): range [0, 1] = 0
+│           ├───"MODE_ID" (atomic): blob = 0
+│           ├───"OUT_FENCE_PTR" (atomic): range [0, UINT64_MAX] = 0
+│           ├───"VRR_ENABLED": range [0, 1] = 0
+│           ├───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+│           ├───"BACKGROUND_COLOR": range [0, UINT64_MAX] = 18446462598732840960
+│           ├───"DEGAMMA_LUT": blob = 0
+│           ├───"DEGAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 129
+│           ├───"CTM": blob = 0
+│           ├───"GAMMA_LUT": blob = 0
+│           └───"GAMMA_LUT_SIZE" (immutable): range [0, UINT32_MAX] = 1024
+└───Planes
+    ├───Plane 0
+    │   ├───Object ID: 35
+    │   ├───CRTCs: {0}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Primary
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 2880
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 1800
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 2880
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 1800
+    │       ├───"IN_FORMATS" (immutable): blob = 36
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 37
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [0, 0] = 0
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 1
+    │   ├───Object ID: 65
+    │   ├───CRTCs: {0}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 66
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 67
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [1, 1] = 1
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 2
+    │   ├───Object ID: 95
+    │   ├───CRTCs: {0}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 96
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 97
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [2, 2] = 2
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 3
+    │   ├───Object ID: 125
+    │   ├───CRTCs: {0}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 126
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 127
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [3, 3] = 3
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 4
+    │   ├───Object ID: 135
+    │   ├───CRTCs: {0}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 136
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 137
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [4, 4] = 4
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 5
+    │   ├───Object ID: 145
+    │   ├───CRTCs: {0}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       └───ARGB8888 (0x34325241)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Cursor
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 1013
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 416
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 64
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 64
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 64
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 64
+    │       ├───"IN_FORMATS" (immutable): blob = 146
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       └───ARGB8888 (0x34325241)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 147
+    │       ├───"rotation": bitmask {rotate-0, rotate-180} = (rotate-0)
+    │       ├───"SIZE_HINTS" (immutable): blob = 149
+    │       ├───"zpos" (immutable): range [5, 5] = 5
+    │       └───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    ├───Plane 6
+    │   ├───Object ID: 153
+    │   ├───CRTCs: {1}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Primary
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 3840
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 2160
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 3840
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 2160
+    │       ├───"IN_FORMATS" (immutable): blob = 154
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 155
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [0, 0] = 0
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 7
+    │   ├───Object ID: 183
+    │   ├───CRTCs: {1}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 184
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 185
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [1, 1] = 1
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 8
+    │   ├───Object ID: 213
+    │   ├───CRTCs: {1}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 214
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 215
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [2, 2] = 2
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 9
+    │   ├───Object ID: 243
+    │   ├───CRTCs: {1}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 244
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 245
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [3, 3] = 3
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 10
+    │   ├───Object ID: 253
+    │   ├───CRTCs: {1}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 254
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 255
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [4, 4] = 4
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 11
+    │   ├───Object ID: 263
+    │   ├───CRTCs: {1}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       └───ARGB8888 (0x34325241)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Cursor
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 3876
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 1759
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 64
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 64
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 64
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 64
+    │       ├───"IN_FORMATS" (immutable): blob = 264
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       └───ARGB8888 (0x34325241)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 265
+    │       ├───"rotation": bitmask {rotate-0, rotate-180} = (rotate-0)
+    │       ├───"SIZE_HINTS" (immutable): blob = 267
+    │       ├───"zpos" (immutable): range [5, 5] = 5
+    │       └───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    ├───Plane 12
+    │   ├───Object ID: 271
+    │   ├───CRTCs: {2}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Primary
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 272
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 273
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [0, 0] = 0
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 13
+    │   ├───Object ID: 301
+    │   ├───CRTCs: {2}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 302
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 303
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [1, 1] = 1
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 14
+    │   ├───Object ID: 331
+    │   ├───CRTCs: {2}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 332
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 333
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [2, 2] = 2
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 15
+    │   ├───Object ID: 361
+    │   ├───CRTCs: {2}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 362
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 363
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [3, 3] = 3
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 16
+    │   ├───Object ID: 371
+    │   ├───CRTCs: {2}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 372
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 373
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [4, 4] = 4
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 17
+    │   ├───Object ID: 381
+    │   ├───CRTCs: {2}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       └───ARGB8888 (0x34325241)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Cursor
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 382
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       └───ARGB8888 (0x34325241)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 383
+    │       ├───"rotation": bitmask {rotate-0, rotate-180} = (rotate-0)
+    │       ├───"SIZE_HINTS" (immutable): blob = 385
+    │       ├───"zpos" (immutable): range [5, 5] = 5
+    │       └───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    ├───Plane 18
+    │   ├───Object ID: 389
+    │   ├───CRTCs: {3}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Primary
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 390
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 391
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [0, 0] = 0
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 19
+    │   ├───Object ID: 419
+    │   ├───CRTCs: {3}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 420
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 421
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [1, 1] = 1
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 20
+    │   ├───Object ID: 449
+    │   ├───CRTCs: {3}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───XRGB16161616F (0x48345258)
+    │   │       ├───XBGR16161616F (0x48344258)
+    │   │       ├───ARGB16161616F (0x48345241)
+    │   │       ├───ABGR16161616F (0x48344241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───NV12 (0x3231564e)
+    │   │       ├───P010 (0x30313050)
+    │   │       ├───P012 (0x32313050)
+    │   │       ├───P016 (0x36313050)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       ├───XVYU2101010 (0x30335658)
+    │   │       ├───XVYU12_16161616 (0x36335658)
+    │   │       └───XVYU16161616 (0x38345658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 450
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   └───ABGR16161616F (0x48344241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───XRGB16161616F (0x48345258)
+    │       │   │   ├───XBGR16161616F (0x48344258)
+    │       │   │   ├───ARGB16161616F (0x48345241)
+    │       │   │   ├───ABGR16161616F (0x48344241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───NV12 (0x3231564e)
+    │       │   │   ├───P010 (0x30313050)
+    │       │   │   ├───P012 (0x32313050)
+    │       │   │   ├───P016 (0x36313050)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   ├───XVYU2101010 (0x30335658)
+    │       │   │   ├───XVYU12_16161616 (0x36335658)
+    │       │   │   └───XVYU16161616 (0x38345658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───XRGB16161616F (0x48345258)
+    │       │       ├───XBGR16161616F (0x48344258)
+    │       │       ├───ARGB16161616F (0x48345241)
+    │       │       ├───ABGR16161616F (0x48344241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───NV12 (0x3231564e)
+    │       │       ├───P010 (0x30313050)
+    │       │       ├───P012 (0x32313050)
+    │       │       ├───P016 (0x36313050)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       ├───XVYU2101010 (0x30335658)
+    │       │       ├───XVYU12_16161616 (0x36335658)
+    │       │       └───XVYU16161616 (0x38345658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 451
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [2, 2] = 2
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 21
+    │   ├───Object ID: 479
+    │   ├───CRTCs: {3}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 480
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 481
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [3, 3] = 3
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    ├───Plane 22
+    │   ├───Object ID: 489
+    │   ├───CRTCs: {3}
+    │   ├───Legacy info
+    │   │   ├───FB ID: 0
+    │   │   └───Formats:
+    │   │       ├───C8 (0x20203843)
+    │   │       ├───RGB565 (0x36314752)
+    │   │       ├───XRGB8888 (0x34325258)
+    │   │       ├───XBGR8888 (0x34324258)
+    │   │       ├───ARGB8888 (0x34325241)
+    │   │       ├───ABGR8888 (0x34324241)
+    │   │       ├───XRGB2101010 (0x30335258)
+    │   │       ├───XBGR2101010 (0x30334258)
+    │   │       ├───ARGB2101010 (0x30335241)
+    │   │       ├───ABGR2101010 (0x30334241)
+    │   │       ├───YUYV (0x56595559)
+    │   │       ├───YVYU (0x55595659)
+    │   │       ├───UYVY (0x59565955)
+    │   │       ├───VYUY (0x59555956)
+    │   │       ├───Y210 (0x30313259)
+    │   │       ├───Y212 (0x32313259)
+    │   │       ├───Y216 (0x36313259)
+    │   │       ├───XYUV8888 (0x56555958)
+    │   │       └───XVYU2101010 (0x30335658)
+    │   └───Properties
+    │       ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Overlay
+    │       ├───"FB_ID" (atomic): object framebuffer = 0
+    │       ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+    │       ├───"CRTC_ID" (atomic): object CRTC = 0
+    │       ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+    │       ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+    │       ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+    │       ├───"IN_FORMATS" (immutable): blob = 490
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS (0x100000000000007)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   └───XYUV8888 (0x56555958)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS (0x100000000000006)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS_CC (0x100000000000008)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   └───ABGR2101010 (0x30334241)
+    │       │   ├───I915_FORMAT_MOD_Y_TILED (0x100000000000002)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   ├───I915_FORMAT_MOD_X_TILED (0x100000000000001)
+    │       │   │   ├───C8 (0x20203843)
+    │       │   │   ├───RGB565 (0x36314752)
+    │       │   │   ├───XRGB8888 (0x34325258)
+    │       │   │   ├───XBGR8888 (0x34324258)
+    │       │   │   ├───ARGB8888 (0x34325241)
+    │       │   │   ├───ABGR8888 (0x34324241)
+    │       │   │   ├───XRGB2101010 (0x30335258)
+    │       │   │   ├───XBGR2101010 (0x30334258)
+    │       │   │   ├───ARGB2101010 (0x30335241)
+    │       │   │   ├───ABGR2101010 (0x30334241)
+    │       │   │   ├───YUYV (0x56595559)
+    │       │   │   ├───YVYU (0x55595659)
+    │       │   │   ├───UYVY (0x59565955)
+    │       │   │   ├───VYUY (0x59555956)
+    │       │   │   ├───Y210 (0x30313259)
+    │       │   │   ├───Y212 (0x32313259)
+    │       │   │   ├───Y216 (0x36313259)
+    │       │   │   ├───XYUV8888 (0x56555958)
+    │       │   │   └───XVYU2101010 (0x30335658)
+    │       │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+    │       │       ├───C8 (0x20203843)
+    │       │       ├───RGB565 (0x36314752)
+    │       │       ├───XRGB8888 (0x34325258)
+    │       │       ├───XBGR8888 (0x34324258)
+    │       │       ├───ARGB8888 (0x34325241)
+    │       │       ├───ABGR8888 (0x34324241)
+    │       │       ├───XRGB2101010 (0x30335258)
+    │       │       ├───XBGR2101010 (0x30334258)
+    │       │       ├───ARGB2101010 (0x30335241)
+    │       │       ├───ABGR2101010 (0x30334241)
+    │       │       ├───YUYV (0x56595559)
+    │       │       ├───YVYU (0x55595659)
+    │       │       ├───UYVY (0x59565955)
+    │       │       ├───VYUY (0x59555956)
+    │       │       ├───Y210 (0x30313259)
+    │       │       ├───Y212 (0x32313259)
+    │       │       ├───Y216 (0x36313259)
+    │       │       ├───XYUV8888 (0x56555958)
+    │       │       └───XVYU2101010 (0x30335658)
+    │       ├───"IN_FORMATS_ASYNC" (immutable): blob = 491
+    │       ├───"rotation": bitmask {rotate-0, rotate-180, reflect-x} = (rotate-0)
+    │       ├───"COLOR_ENCODING": enum {ITU-R BT.601 YCbCr, ITU-R BT.709 YCbCr, ITU-R BT.2020 YCbCr} = ITU-R BT.709 YCbCr
+    │       ├───"COLOR_RANGE": enum {YCbCr limited range, YCbCr full range} = YCbCr limited range
+    │       ├───"alpha": range [0, UINT16_MAX] = 65535
+    │       ├───"pixel blend mode": enum {None, Pre-multiplied, Coverage} = Pre-multiplied
+    │       ├───"zpos" (immutable): range [4, 4] = 4
+    │       ├───"FB_DAMAGE_CLIPS" (atomic): blob = 0
+    │       └───"SCALING_FILTER": enum {Default, Nearest Neighbor} = Default
+    └───Plane 23
+        ├───Object ID: 499
+        ├───CRTCs: {3}
+        ├───Legacy info
+        │   ├───FB ID: 0
+        │   └───Formats:
+        │       └───ARGB8888 (0x34325241)
+        └───Properties
+            ├───"type" (immutable): enum {Overlay, Primary, Cursor} = Cursor
+            ├───"FB_ID" (atomic): object framebuffer = 0
+            ├───"IN_FENCE_FD" (atomic): srange [-1, INT32_MAX] = -1
+            ├───"CRTC_ID" (atomic): object CRTC = 0
+            ├───"CRTC_X" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+            ├───"CRTC_Y" (atomic): srange [INT32_MIN, INT32_MAX] = 0
+            ├───"CRTC_W" (atomic): range [0, INT32_MAX] = 0
+            ├───"CRTC_H" (atomic): range [0, INT32_MAX] = 0
+            ├───"SRC_X" (atomic): range [0, UINT32_MAX] = 0
+            ├───"SRC_Y" (atomic): range [0, UINT32_MAX] = 0
+            ├───"SRC_W" (atomic): range [0, UINT32_MAX] = 0
+            ├───"SRC_H" (atomic): range [0, UINT32_MAX] = 0
+            ├───"IN_FORMATS" (immutable): blob = 500
+            │   └───DRM_FORMAT_MOD_LINEAR (0x0)
+            │       └───ARGB8888 (0x34325241)
+            ├───"IN_FORMATS_ASYNC" (immutable): blob = 501
+            ├───"rotation": bitmask {rotate-0, rotate-180} = (rotate-0)
+            ├───"SIZE_HINTS" (immutable): blob = 503
+            ├───"zpos" (immutable): range [5, 5] = 5
+            └───"FB_DAMAGE_CLIPS" (atomic): blob = 0

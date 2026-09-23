@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+tv_token.txt
+*.swp
+*~
