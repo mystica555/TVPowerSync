@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""
+control_tv.py - Comprehensive power control for Samsung TV (2016 KU7000 / Tizen)
+Combines Wake-on-LAN (WoL), HDMI-CEC, and KDE KWin DPMS.
+
+Usage:
+    ./control_tv.py status      # Check DPMS mode and CEC TV power state
+    ./control_tv.py wake        # Wake TV (WoL + CEC Image View On + DPMS On)
+    ./control_tv.py standby     # Turn off TV (CEC Standby + DPMS Off)
+    ./control_tv.py wol         # Send Wake-on-LAN magic packet only
+"""
+
+import sys
+import os
+import time
+import socket
+import subprocess
+
+try:
+    import dbus
+except ImportError:
+    dbus = None
+
+TV_IP = "192.168.0.2"
+TV_MAC = "40:16:3b:d0:4f:8b"
+CEC_DEVICE = "/dev/cec0"
+
+def send_wol(mac=TV_MAC):
+    """Broadcast Wake-on-LAN magic packet to power on the TV."""
+    mac_clean = mac.replace(":", "").replace("-", "")
+    if len(mac_clean) != 12:
+        print(f"Error: Invalid MAC address {mac}")
+        return False
+    mac_bytes = bytes.fromhex(mac_clean)
+    packet = b"\xff" * 6 + mac_bytes * 16
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        for target in ("255.255.255.255", "192.168.0.255", TV_IP):
+            try:
+                s.sendto(packet, (target, 9))
+                s.sendto(packet, (target, 7))
+            except Exception:
+                pass
+    print(f"[*] Wake-on-LAN Magic Packet sent to {mac}")
+    return True
+
+def run_cmd(cmd, check=False):
+    return subprocess.run(cmd, shell=True, capture_output=True, text=True, check=check)
+
+def get_status():
+    print("=== Display Power Management (DPMS) ===")
+    p = run_cmd("kscreen-doctor --dpms show")
+    if p.stdout.strip():
+        print(p.stdout.strip())
+    else:
+        print("DPMS query returned no output.")
+
+    print("\n=== HDMI-CEC Power Status ===")
+    p = run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --give-device-power-status")
+    for line in p.stdout.split("\n"):
+        if "pwr-state:" in line or "Received from TV" in line:
+            print(line.strip())
+
+    print("\n=== KDE Screensaver Status (via Python D-Bus) ===")
+    if dbus is not None:
+        try:
+            session_bus = dbus.SessionBus()
+            ss_obj = session_bus.get_object("org.freedesktop.ScreenSaver", "/org/freedesktop/ScreenSaver")
+            ss_iface = dbus.Interface(ss_obj, "org.freedesktop.ScreenSaver")
+            is_active = bool(ss_iface.GetActive())
+            state_str = "Active / Locked (Screen Sleeping)" if is_active else "Inactive / Unlocked (Screen Awake)"
+            print(f"Screensaver: {state_str} (GetActive = {is_active})")
+        except Exception as e:
+            print(f"Screensaver: Query error via D-Bus: {e}")
+    else:
+        print("Screensaver: python-dbus module not available.")
+
+    print("\n=== Network Reachability ===")
+    # Quick probe to port 8001
+    p = run_cmd(f"nc -zv -w 1 {TV_IP} 8001 2>&1")
+    if "succeeded" in p.stdout:
+        print(f"TV network interface ({TV_IP}:8001) is AWAKE and responding.")
+    else:
+        print(f"TV network interface ({TV_IP}:8001) is ASLEEP / unreachable.")
+
+def wake_tv():
+    print("[*] Initiating TV Wake Sequence...")
+    # 1. Turn on KDE DPMS output first so GPU begins clocking signal
+    run_cmd("kscreen-doctor --dpms on")
+    
+    # 2. Send Wake-on-LAN magic packet over the network
+    send_wol(TV_MAC)
+    
+    # 3. Send HDMI-CEC commands: turn TV on and switch to our HDMI input
+    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
+    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0")
+    
+    time.sleep(1)
+    print("[*] TV Wake commands completed.\n")
+    get_status()
+
+def standby_tv():
+    print("[*] Initiating TV Standby Sequence...")
+    # 1. Send HDMI-CEC Standby command so TV doesn't hang on "No Signal" screen
+    p = run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby")
+    
+    # 2. Turn off DPMS
+    run_cmd("kscreen-doctor --dpms off")
+    
+    print("[*] Waiting 4 seconds for TV network stack to spin down...")
+    time.sleep(4)
+    print("[*] TV Standby commands completed.\n")
+    get_status()
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__.strip())
+        sys.exit(0)
+
+    action = sys.argv[1].lower()
+    if action == "status":
+        get_status()
+    elif action in ("wake", "on"):
+        wake_tv()
+    elif action in ("standby", "off", "sleep"):
+        standby_tv()
+    elif action == "wol":
+        send_wol()
+    else:
+        print(f"Unknown action: {action}")
+        print(__doc__.strip())
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
