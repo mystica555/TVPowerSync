@@ -1,0 +1,14 @@
+[Unit]
+Description=Samsung TV Power Sync Daemon for KDE Screensaver & Suspend
+After=plasma-workspace.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/tv_power_daemon.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
