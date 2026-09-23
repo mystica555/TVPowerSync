@@ -25,8 +25,8 @@ TV_IP = "192.168.0.2"
 TV_MAC = "40:16:3b:d0:4f:8b"
 CEC_DEVICE = "/dev/cec0"
 
-def send_wol(mac=TV_MAC):
-    """Broadcast Wake-on-LAN magic packet to power on the TV."""
+def send_wol(mac=TV_MAC, bursts=1, delay_between=0.4):
+    """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
     mac_clean = mac.replace(":", "").replace("-", "")
     if len(mac_clean) != 12:
         print(f"Error: Invalid MAC address {mac}")
@@ -34,15 +34,50 @@ def send_wol(mac=TV_MAC):
     mac_bytes = bytes.fromhex(mac_clean)
     packet = b"\xff" * 6 + mac_bytes * 16
 
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        for target in ("255.255.255.255", "192.168.0.255", TV_IP):
+    targets = {"255.255.255.255", "192.168.0.255", TV_IP}
+    local_ips = []
+    try:
+        out = subprocess.run(["ip", "-o", "-4", "addr", "show"], capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            parts = line.split()
+            if "inet" in parts:
+                ip_addr = parts[parts.index("inet") + 1].split("/")[0]
+                if ip_addr.startswith("192.168.") or ip_addr.startswith("10."):
+                    local_ips.append(ip_addr)
+            if "brd" in parts:
+                brd = parts[parts.index("brd") + 1]
+                if brd.startswith("192.168.") or brd.startswith("10.") or brd == "255.255.255.255":
+                    targets.add(brd)
+    except Exception:
+        pass
+
+    for burst_idx in range(bursts):
+        # 1. Global / subnet broadcasts
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            for target in targets:
+                for port in (9, 7):
+                    try:
+                        s.sendto(packet, (target, port))
+                    except Exception:
+                        pass
+
+        # 2. Bound to each local NIC (Ethernet and Wi-Fi)
+        for local_ip in local_ips:
             try:
-                s.sendto(packet, (target, 9))
-                s.sendto(packet, (target, 7))
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    s.bind((local_ip, 0))
+                    for port in (9, 7):
+                        s.sendto(packet, ("255.255.255.255", port))
+                        s.sendto(packet, ("192.168.0.255", port))
             except Exception:
                 pass
-    print(f"[*] Wake-on-LAN Magic Packet sent to {mac}")
+
+        if burst_idx < bursts - 1:
+            time.sleep(delay_between)
+
+    print(f"[*] Wake-on-LAN Magic Packet sent across all NICs to {mac} ({bursts} burst{'s' if bursts > 1 else ''})")
     return True
 
 def run_cmd(cmd, check=False):
@@ -85,19 +120,26 @@ def get_status():
         print(f"TV network interface ({TV_IP}:8001) is ASLEEP / unreachable.")
 
 def wake_tv():
-    print("[*] Initiating TV Wake Sequence...")
+    print("[*] Initiating Two-Stage TV Wake Sequence...")
     # 1. Turn on KDE DPMS output first so GPU begins clocking signal
     run_cmd("kscreen-doctor --dpms on")
     
-    # 2. Send Wake-on-LAN magic packet over the network
-    send_wol(TV_MAC)
-    
-    # 3. Send HDMI-CEC commands: turn TV on and switch to our HDMI input
+    # 2. Stage 1: Send initial WoL burst to wake sleeping PHY and initial CEC pulse
+    print("[*] Stage 1: Sending initial WoL burst & CEC pulse...")
+    send_wol(TV_MAC, bursts=1)
+    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
+
+    # 3. Allow 500ms for hardware to ramp power
+    time.sleep(0.5)
+
+    # 4. Stage 2: Send second WoL burst to trip power supply and confirm CEC input switch
+    print("[*] Stage 2: Sending second WoL burst & confirming CEC input switch...")
+    send_wol(TV_MAC, bursts=2, delay_between=0.4)
     run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
     run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0")
     
-    time.sleep(1)
-    print("[*] TV Wake commands completed.\n")
+    time.sleep(1.5)
+    print("[*] TV Wake sequence completed.\n")
     get_status()
 
 def standby_tv():

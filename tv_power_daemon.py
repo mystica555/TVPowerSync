@@ -49,20 +49,60 @@ def log(msg: str):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {msg}", flush=True)
 
-def send_wol(mac=TV_MAC):
+def send_wol(mac=TV_MAC, bursts=1, delay_between=0.4):
+    """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
     mac_clean = mac.replace(":", "").replace("-", "")
+    if len(mac_clean) != 12:
+        log(f"Error: Invalid MAC address {mac}")
+        return False
     mac_bytes = bytes.fromhex(mac_clean)
     packet = b"\xff" * 6 + mac_bytes * 16
 
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        for target in ("255.255.255.255", "192.168.0.255", TV_IP):
+    targets = {"255.255.255.255", "192.168.0.255", TV_IP}
+    local_ips = []
+    try:
+        out = subprocess.run(["ip", "-o", "-4", "addr", "show"], capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            parts = line.split()
+            if "inet" in parts:
+                ip_addr = parts[parts.index("inet") + 1].split("/")[0]
+                if ip_addr.startswith("192.168.") or ip_addr.startswith("10."):
+                    local_ips.append(ip_addr)
+            if "brd" in parts:
+                brd = parts[parts.index("brd") + 1]
+                if brd.startswith("192.168.") or brd.startswith("10.") or brd == "255.255.255.255":
+                    targets.add(brd)
+    except Exception:
+        pass
+
+    for burst_idx in range(bursts):
+        # 1. Global / subnet broadcasts
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            for target in targets:
+                for port in (9, 7):
+                    try:
+                        s.sendto(packet, (target, port))
+                    except Exception:
+                        pass
+
+        # 2. Bound to each local NIC (Ethernet and Wi-Fi)
+        for local_ip in local_ips:
             try:
-                s.sendto(packet, (target, 9))
-                s.sendto(packet, (target, 7))
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    s.bind((local_ip, 0))
+                    for port in (9, 7):
+                        s.sendto(packet, ("255.255.255.255", port))
+                        s.sendto(packet, ("192.168.0.255", port))
             except Exception:
                 pass
-    log(f"Wake-on-LAN packet broadcasted to {mac}")
+
+        if burst_idx < bursts - 1:
+            time.sleep(delay_between)
+
+    log(f"Wake-on-LAN packet broadcasted across all network interfaces to {mac} ({bursts} burst{'s' if bursts > 1 else ''})")
+    return True
 
 def send_tv_websocket_key(key="KEY_POWEROFF"):
     """Send remote control key over Samsung TV WebSocket interface."""
@@ -138,13 +178,23 @@ class TVPowerSyncDaemon:
         # 1. Turn on KDE DPMS so video signal is clocked
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Send Wake-on-LAN Magic Packet to power on the TV
-        send_wol(TV_MAC)
+        # 2. Stage 1 Wake: Initial WoL burst to wake sleeping PHY and initial CEC pulse
+        log("Stage 1 Wake: Sending initial WoL burst & CEC pulse...")
+        send_wol(TV_MAC, bursts=1)
+        run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
 
-        # 3. Send HDMI-CEC Image View On & Active Source
+        # 3. Schedule Stage 2 in 500ms to hit energized PHY and confirm CEC input
+        GLib.timeout_add(500, self._stage2_wake)
+
+    def _stage2_wake(self) -> bool:
+        if self.state != "awake":
+            return False
+        log("Stage 2 Wake: Sending second WoL burst & confirming CEC input switch...")
+        send_wol(TV_MAC, bursts=2, delay_between=0.4)
         run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
         run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0")
-        log("HDMI-CEC Image View On & Active Source sent.")
+        log("Two-stage wake sequence completed.")
+        return False  # Run once
 
     def poll_hardware_dpms(self) -> bool:
         """Periodic fast poll of hardware DPMS sysfs node (every 150ms)."""
