@@ -174,9 +174,20 @@ class TVPowerSyncDaemon:
         # 1. Turn on KDE DPMS so video signal is clocked immediately
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Immediately broadcast rapid burst of WoL packets across all NICs
-        log("Broadcasting rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
-        send_wol(TV_MAC, bursts=3, delay_between=0.05)
+        # 2. Try websocket KEY_POWER first (instant wake if TV network is still up)
+        if send_tv_websocket_key("KEY_POWER"):
+            log("[*] TV woken via WebSocket KEY_POWER (fast path).")
+            return
+
+        # 3. Websocket failed — TV is in deep standby. Use WoL + retry loop.
+        for attempt in range(1, 11):
+            log(f"Wake attempt {attempt}/10: Sending WoL then checking WebSocket...")
+            send_wol(TV_MAC, bursts=3, delay_between=0.05)
+            time.sleep(2.0)
+            if send_tv_websocket_key("KEY_POWER"):
+                log(f"[*] TV woken via WoL + WebSocket on attempt {attempt}.")
+                return
+        log("[!] TV failed to wake after 10 WoL attempts.")
 
     def poll_hardware_dpms(self) -> bool:
         """Periodic fast poll of hardware DPMS sysfs node (every 150ms)."""
