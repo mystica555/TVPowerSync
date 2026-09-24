@@ -177,7 +177,7 @@ class TVPowerSyncDaemon:
         send_tv_websocket_key("KEY_POWER")
 
         # 2. Send HDMI-CEC Standby command asynchronously so TV doesn't hang on 'No Signal'
-        run_cmd_async(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby", desc="HDMI-CEC Standby")
+        run_cmd_async(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby", desc="HDMI-CEC Standby")
 
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
@@ -195,7 +195,7 @@ class TVPowerSyncDaemon:
 
         # 3. Fire HDMI-CEC wake & active-source in background (non-blocking)
         run_cmd_async(
-            f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0",
+            f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0",
             desc="HDMI-CEC Image View On & Active Source"
         )
 
@@ -206,7 +206,7 @@ class TVPowerSyncDaemon:
         if self.state != "awake":
             return False
         run_cmd_async(
-            f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0",
+            f"cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0",
             desc="HDMI-CEC Active Source confirmation"
         )
         return False  # Run once

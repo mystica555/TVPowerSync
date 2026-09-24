@@ -92,7 +92,7 @@ def get_status():
         print("DPMS query returned no output.")
 
     print("\n=== HDMI-CEC Power Status ===")
-    p = run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --give-device-power-status")
+    p = run_cmd(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --give-device-power-status")
     for line in p.stdout.split("\n"):
         if "pwr-state:" in line or "Received from TV" in line:
             print(line.strip())
@@ -130,7 +130,7 @@ def wake_tv():
 
     # 3. Send HDMI-CEC Image View On & Active Source (combined in single command)
     print("[*] Sending HDMI-CEC Image View On & Active Source...")
-    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+    run_cmd(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
     time.sleep(1.0)
     print("[*] TV Wake sequence completed.\n")
@@ -139,7 +139,7 @@ def wake_tv():
 def standby_tv():
     print("[*] Initiating TV Standby Sequence...")
     # 1. Send HDMI-CEC Standby command so TV doesn't hang on "No Signal" screen
-    p = run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby")
+    p = run_cmd(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby")
     
     # 2. Turn off DPMS
     run_cmd("kscreen-doctor --dpms off")

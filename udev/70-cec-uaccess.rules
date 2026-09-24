@@ -1,0 +1,2 @@
+# Enable unprivileged user access to HDMI-CEC devices for active desktop sessions
+KERNEL=="cec*", SUBSYSTEM=="cec", GROUP="video", MODE="0660", TAG+="uaccess"

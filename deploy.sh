@@ -37,8 +37,8 @@ systemctl --user enable tv-power-sync.service
 systemctl --user restart tv-power-sync.service
 echo "  User service tv-power-sync.service reloaded and restarted."
 
-# 4. Deploy system boot service and NetworkManager dispatcher (system-level)
-echo -e "\n[*] Deploying system boot service and NetworkManager dispatcher..."
+# 4. Deploy system boot service, NetworkManager dispatcher, and udev rules (system-level)
+echo -e "\n[*] Deploying system boot service, NetworkManager dispatcher, and udev rules..."
 if command -v sudo >/dev/null 2>&1; then
     sudo cp "$REPO_DIR/systemd/tv-boot-wol.service" /etc/systemd/system/tv-boot-wol.service
     sudo cp "$REPO_DIR/networkmanager/99-tv-boot-wol.sh" /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
@@ -46,6 +46,13 @@ if command -v sudo >/dev/null 2>&1; then
     sudo systemctl daemon-reload
     sudo systemctl enable tv-boot-wol.service
     echo "  System service tv-boot-wol.service and NetworkManager hook updated."
+
+    if [ -d "$REPO_DIR/udev" ]; then
+        sudo cp "$REPO_DIR"/udev/*.rules /etc/udev/rules.d/
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --subsystem-match=cec
+        echo "  Udev rules for HDMI-CEC deployed and triggered."
+    fi
 else
     echo "  Notice: sudo not available, skipping system service copy."
 fi
