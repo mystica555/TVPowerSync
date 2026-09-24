@@ -110,7 +110,7 @@ def send_tv_websocket_key(key="KEY_POWEROFF"):
     if ws_connect is None:
         log("Notice: websockets library not available for WebSocket key transmission.")
         return False
-    name_b64 = base64.b64encode(b"Laptop-KDE").decode()
+    name_b64 = base64.b64encode(b"SamsungTvRemote").decode()
     url = f"ws://{TV_IP}:8001/api/v2/channels/samsung.remote.control?name={name_b64}"
     payload = json.dumps({
         "method": "ms.remote.control",
@@ -123,7 +123,10 @@ def send_tv_websocket_key(key="KEY_POWEROFF"):
     })
     try:
         with ws_connect(url, open_timeout=1.5, close_timeout=1.0) as ws:
+            # TV requires us to wait for the ms.channel.connect event before it will accept keys
+            ws.recv(timeout=1.0)
             ws.send(payload)
+            time.sleep(0.5)
             log(f"WebSocket remote keystroke '{key}' sent to {url}")
             return True
     except Exception as e:

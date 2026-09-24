@@ -74,7 +74,7 @@ async def attempt_pairing(port=8002):
 def main():
     print(__doc__.strip())
     print("-" * 60)
-    input("Press Enter when ready to start pairing...")
+    # input
     
     # Try port 8002 first (standard for Tizen secure websocket)
     success = asyncio.run(attempt_pairing(8002))
