@@ -20,7 +20,7 @@ Actions:
 import sys
 import os
 # Add venv to sys.path so we can import samsungtvws without breaking system dbus
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv/lib/python3.14/site-packages"))
+sys.path.append("/home/mike/src/drmstuff/venv/lib/python3.14/site-packages")
 import glob
 import signal
 import socket

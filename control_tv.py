@@ -134,12 +134,8 @@ def wake_tv():
 
 def standby_tv():
     print("[*] Initiating TV Standby Sequence...")
-    # 1. Send KEY_POWER via websocket FIRST, before DPMS off (TV ignores it if no signal)
-    print("[*] Sending KEY_POWER via WebSocket...")
-    from tv_power_daemon import send_tv_websocket_key
-    send_tv_websocket_key("KEY_POWER")
     
-    # 2. Turn off DPMS
+    # Turn off DPMS. The tv_power_daemon will detect this and send KEY_POWER automatically.
     run_cmd("kscreen-doctor --dpms off")
     
     print("[*] Waiting 4 seconds for TV network stack to spin down...")
