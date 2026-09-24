@@ -25,6 +25,7 @@ import socket
 import json
 import base64
 import subprocess
+import threading
 import time
 from datetime import datetime
 
@@ -49,7 +50,7 @@ def log(msg: str):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {msg}", flush=True)
 
-def send_wol(mac=TV_MAC, bursts=1, delay_between=0.4):
+def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
     mac_clean = mac.replace(":", "").replace("-", "")
     if len(mac_clean) != 12:
@@ -132,6 +133,19 @@ def send_tv_websocket_key(key="KEY_POWEROFF"):
 def run_cmd(cmd: str):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
+def run_cmd_async(cmd: str, desc: str = ""):
+    """Run command asynchronously in a daemon thread so the GLib event loop is never blocked."""
+    def _worker():
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if desc:
+            if res.returncode == 0:
+                log(f"{desc} executed successfully.")
+            else:
+                log(f"{desc} completed with code {res.returncode}")
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    return t
+
 class TVPowerSyncDaemon:
     def __init__(self):
         # Locate laptop internal display dpms sysfs node
@@ -162,12 +176,8 @@ class TVPowerSyncDaemon:
         send_tv_websocket_key("KEY_POWEROFF")
         send_tv_websocket_key("KEY_POWER")
 
-        # 2. Send HDMI-CEC Standby command so TV doesn't hang on 'No Signal'
-        res = run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby")
-        if res.returncode == 0:
-            log("HDMI-CEC Standby command sent successfully.")
-        else:
-            log(f"HDMI-CEC Standby notice: code {res.returncode}")
+        # 2. Send HDMI-CEC Standby command asynchronously so TV doesn't hang on 'No Signal'
+        run_cmd_async(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby", desc="HDMI-CEC Standby")
 
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
@@ -175,25 +185,30 @@ class TVPowerSyncDaemon:
         log(f"--> [ON DETECTED] ({reason})")
         self.state = "awake"
 
-        # 1. Turn on KDE DPMS so video signal is clocked
+        # 1. Turn on KDE DPMS so video signal is clocked immediately
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Stage 1 Wake: Initial WoL burst to wake sleeping PHY and initial CEC pulse
-        log("Stage 1 Wake: Sending initial WoL burst & CEC pulse...")
-        send_wol(TV_MAC, bursts=1)
-        run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
+        # 2. Immediately broadcast rapid burst of WoL packets across all NICs (3 packets, 50ms interval)
+        # Delivers both PHY wakeup and power-trip packets in <100ms
+        log("Broadcasting rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
+        send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
-        # 3. Schedule Stage 2 in 500ms to hit energized PHY and confirm CEC input
-        GLib.timeout_add(500, self._stage2_wake)
+        # 3. Fire HDMI-CEC wake & active-source in background (non-blocking)
+        run_cmd_async(
+            f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0",
+            desc="HDMI-CEC Image View On & Active Source"
+        )
 
-    def _stage2_wake(self) -> bool:
+        # 4. Schedule follow-up active-source confirmation in 1.5s after TV display panel initializes
+        GLib.timeout_add(1500, self._confirm_cec_active_source)
+
+    def _confirm_cec_active_source(self) -> bool:
         if self.state != "awake":
             return False
-        log("Stage 2 Wake: Sending second WoL burst & confirming CEC input switch...")
-        send_wol(TV_MAC, bursts=2, delay_between=0.4)
-        run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
-        run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0")
-        log("Two-stage wake sequence completed.")
+        run_cmd_async(
+            f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0",
+            desc="HDMI-CEC Active Source confirmation"
+        )
         return False  # Run once
 
     def poll_hardware_dpms(self) -> bool:

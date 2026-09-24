@@ -25,7 +25,7 @@ TV_IP = "192.168.0.2"
 TV_MAC = "40:16:3b:d0:4f:8b"
 CEC_DEVICE = "/dev/cec0"
 
-def send_wol(mac=TV_MAC, bursts=1, delay_between=0.4):
+def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
     mac_clean = mac.replace(":", "").replace("-", "")
     if len(mac_clean) != 12:
@@ -120,25 +120,19 @@ def get_status():
         print(f"TV network interface ({TV_IP}:8001) is ASLEEP / unreachable.")
 
 def wake_tv():
-    print("[*] Initiating Two-Stage TV Wake Sequence...")
+    print("[*] Initiating TV Wake Sequence...")
     # 1. Turn on KDE DPMS output first so GPU begins clocking signal
     run_cmd("kscreen-doctor --dpms on")
     
-    # 2. Stage 1: Send initial WoL burst to wake sleeping PHY and initial CEC pulse
-    print("[*] Stage 1: Sending initial WoL burst & CEC pulse...")
-    send_wol(TV_MAC, bursts=1)
-    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
+    # 2. Immediately broadcast rapid burst of WoL packets across all NICs
+    print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
+    send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
-    # 3. Allow 500ms for hardware to ramp power
-    time.sleep(0.5)
+    # 3. Send HDMI-CEC Image View On & Active Source (combined in single command)
+    print("[*] Sending HDMI-CEC Image View On & Active Source...")
+    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
-    # 4. Stage 2: Send second WoL burst to trip power supply and confirm CEC input switch
-    print("[*] Stage 2: Sending second WoL burst & confirming CEC input switch...")
-    send_wol(TV_MAC, bursts=2, delay_between=0.4)
-    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on")
-    run_cmd(f"sudo cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0")
-    
-    time.sleep(1.5)
+    time.sleep(1.0)
     print("[*] TV Wake sequence completed.\n")
     get_status()
 

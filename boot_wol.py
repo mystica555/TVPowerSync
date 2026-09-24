@@ -27,7 +27,7 @@ def is_tv_connected() -> bool:
             pass
     return False
 
-def send_wol(mac=TV_MAC, bursts=2, delay_between=0.4):
+def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
     mac_clean = mac.replace(":", "").replace("-", "")
     if len(mac_clean) != 12:
@@ -88,19 +88,11 @@ def main():
         return
 
     print("[*] External display connection detected on DRM port.")
-    # Stage 1: Initial WoL burst + CEC pulse
-    send_wol(TV_MAC, bursts=1)
-    if os.path.exists(CEC_DEVICE):
-        subprocess.run(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on", shell=True, capture_output=True)
+    print("[*] Sending rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
+    send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
-    # 500ms delay to ramp PHY and HDMI receiver
-    time.sleep(0.5)
-
-    # Stage 2: Second WoL burst to trip power supply and confirm CEC input switch
-    send_wol(TV_MAC, bursts=2, delay_between=0.4)
     if os.path.exists(CEC_DEVICE):
-        subprocess.run(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on", shell=True, capture_output=True)
-        subprocess.run(f"cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0", shell=True, capture_output=True)
+        subprocess.run(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0", shell=True, capture_output=True)
 
     print("[*] Boot wake sequence completed.")
 
