@@ -124,22 +124,11 @@ def wake_tv():
     # 1. Turn on KDE DPMS output first so GPU begins clocking signal
     run_cmd("kscreen-doctor --dpms on")
     
-    from tv_power_daemon import send_tv_websocket_key
-    for attempt in range(1, 11):
-        print(f"[*] Wake attempt {attempt}/10: Checking if TV network stack is awake...")
-        try:
-            if send_tv_websocket_key("KEY_POWERON"):
-                print("[*] TV WebSocket is alive! TV is awake.")
-                break
-        except Exception:
-            pass
-            
-        print("[-] TV WebSocket unresponsive. Blasting Wake-on-LAN magic packets...")
-        send_wol(TV_MAC, bursts=3, delay_between=0.05)
-        time.sleep(2.0)
-    else:
-        print("[!] TV failed to wake after 10 attempts.")
+    # 2. Immediately broadcast rapid burst of WoL packets across all NICs
+    print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
+    send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
+    time.sleep(1.0)
     print("[*] TV Wake sequence completed.\n")
     get_status()
 
