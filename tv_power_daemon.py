@@ -172,12 +172,8 @@ class TVPowerSyncDaemon:
         log(f"--> [OFF DETECTED] ({reason})")
         self.state = "asleep"
 
-        # 1. Send WebSocket keystroke packet to TV interface
+        # Only send KEY_POWEROFF via websocket after DPMS off.
         send_tv_websocket_key("KEY_POWEROFF")
-        send_tv_websocket_key("KEY_POWER")
-
-        # 2. Send HDMI-CEC Standby command asynchronously so TV doesn't hang on 'No Signal'
-        run_cmd_async(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby", desc="HDMI-CEC Standby")
 
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
@@ -188,28 +184,9 @@ class TVPowerSyncDaemon:
         # 1. Turn on KDE DPMS so video signal is clocked immediately
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Immediately broadcast rapid burst of WoL packets across all NICs (3 packets, 50ms interval)
-        # Delivers both PHY wakeup and power-trip packets in <100ms
+        # 2. Immediately broadcast rapid burst of WoL packets across all NICs
         log("Broadcasting rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
         send_wol(TV_MAC, bursts=3, delay_between=0.05)
-
-        # 3. Fire HDMI-CEC wake & active-source in background (non-blocking)
-        run_cmd_async(
-            f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0",
-            desc="HDMI-CEC Image View On & Active Source"
-        )
-
-        # 4. Schedule follow-up active-source confirmation in 1.5s after TV display panel initializes
-        GLib.timeout_add(1500, self._confirm_cec_active_source)
-
-    def _confirm_cec_active_source(self) -> bool:
-        if self.state != "awake":
-            return False
-        run_cmd_async(
-            f"cec-ctl -d {CEC_DEVICE} --playback --active-source phys-addr=1.0.0.0",
-            desc="HDMI-CEC Active Source confirmation"
-        )
-        return False  # Run once
 
     def poll_hardware_dpms(self) -> bool:
         """Periodic fast poll of hardware DPMS sysfs node (every 150ms)."""

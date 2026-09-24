@@ -128,21 +128,20 @@ def wake_tv():
     print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
-    # 3. Send HDMI-CEC Image View On & Active Source (combined in single command)
-    print("[*] Sending HDMI-CEC Image View On & Active Source...")
-    run_cmd(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
-
     time.sleep(1.0)
     print("[*] TV Wake sequence completed.\n")
     get_status()
 
 def standby_tv():
     print("[*] Initiating TV Standby Sequence...")
-    # 1. Send HDMI-CEC Standby command so TV doesn't hang on "No Signal" screen
-    p = run_cmd(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --standby")
-    
-    # 2. Turn off DPMS
+    # 1. Turn off DPMS
     run_cmd("kscreen-doctor --dpms off")
+    
+    # 2. Send KEY_POWEROFF via websocket
+    print("[*] Sending KEY_POWEROFF via WebSocket...")
+    # Import from our daemon to reuse websocket logic
+    from tv_power_daemon import send_tv_websocket_key
+    send_tv_websocket_key("KEY_POWEROFF")
     
     print("[*] Waiting 4 seconds for TV network stack to spin down...")
     time.sleep(4)
