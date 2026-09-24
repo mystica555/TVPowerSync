@@ -137,11 +137,11 @@ def standby_tv():
     # 1. Turn off DPMS
     run_cmd("kscreen-doctor --dpms off")
     
-    # 2. Send KEY_POWEROFF via websocket
-    print("[*] Sending KEY_POWEROFF via WebSocket...")
+    # 2. Send KEY_POWER via websocket
+    print("[*] Sending KEY_POWER via WebSocket...")
     # Import from our daemon to reuse websocket logic
     from tv_power_daemon import send_tv_websocket_key
-    send_tv_websocket_key("KEY_POWEROFF")
+    send_tv_websocket_key("KEY_POWER")
     
     print("[*] Waiting 4 seconds for TV network stack to spin down...")
     time.sleep(4)

@@ -172,8 +172,8 @@ class TVPowerSyncDaemon:
         log(f"--> [OFF DETECTED] ({reason})")
         self.state = "asleep"
 
-        # Only send KEY_POWEROFF via websocket after DPMS off.
-        send_tv_websocket_key("KEY_POWEROFF")
+        # Only send KEY_POWER via websocket after DPMS off.
+        send_tv_websocket_key("KEY_POWER")
 
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
