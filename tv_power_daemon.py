@@ -19,6 +19,8 @@ Actions:
 
 import sys
 import os
+# Add venv to sys.path so we can import samsungtvws without breaking system dbus
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv/lib/python3.14/site-packages"))
 import glob
 import signal
 import socket
@@ -106,29 +108,14 @@ def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     return True
 
 def send_tv_websocket_key(key="KEY_POWEROFF"):
-    """Send remote control key over Samsung TV WebSocket interface."""
-    if ws_connect is None:
-        log("Notice: websockets library not available for WebSocket key transmission.")
-        return False
-    name_b64 = base64.b64encode(b"SamsungTvRemote").decode()
-    url = f"ws://{TV_IP}:8001/api/v2/channels/samsung.remote.control?name={name_b64}"
-    payload = json.dumps({
-        "method": "ms.remote.control",
-        "params": {
-            "Cmd": "Click",
-            "DataOfCmd": key,
-            "Option": "false",
-            "TypeOfRemote": "SendRemoteKey"
-        }
-    })
+    """Send remote control key over Samsung TV WebSocket interface using samsungtvws."""
     try:
-        with ws_connect(url, open_timeout=1.5, close_timeout=1.0) as ws:
-            # TV requires us to wait for the ms.channel.connect event before it will accept keys
-            ws.recv(timeout=1.0)
-            ws.send(payload)
-            time.sleep(0.5)
-            log(f"WebSocket remote keystroke '{key}' sent to {url}")
-            return True
+        from samsungtvws import SamsungTVWS
+        # Initialize without a token (uses port 8001 by default)
+        tv = SamsungTVWS(TV_IP)
+        tv.shortcuts().remote.send_key(key)
+        log(f"WebSocket remote keystroke '{key}' sent via samsungtvws.")
+        return True
     except Exception as e:
         log(f"WebSocket send ({key}) error: {e}")
         return False
