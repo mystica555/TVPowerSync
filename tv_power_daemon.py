@@ -136,7 +136,26 @@ def run_cmd_async(cmd: str, desc: str = ""):
     t.start()
     return t
 
+
+def get_tv_power_state() -> str:
+    """Uses cec-ctl to get the current power state of the TV.
+    Returns 'on', 'standby', 'to-on', 'to-standby', or 'offline'.
+    """
+    try:
+        import subprocess
+        output = subprocess.check_output(
+            ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
+            stderr=subprocess.STDOUT, timeout=2.0
+        ).decode()
+        for line in output.splitlines():
+            if "pwr-state:" in line:
+                return line.split(":")[1].split("(")[0].strip()
+        return "offline"
+    except Exception:
+        return "offline"
+
 class TVPowerSyncDaemon:
+
     def __init__(self):
         # Locate laptop internal display dpms sysfs node
         candidates = glob.glob("/sys/class/drm/*-eDP-*/dpms")
@@ -183,20 +202,9 @@ class TVPowerSyncDaemon:
         run_cmd("kscreen-doctor --dpms on")
 
         # 2. Check current power state via CEC to avoid toggling it OFF if it's already ON
-        try:
-            output = subprocess.check_output(
-                ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
-                stderr=subprocess.STDOUT, timeout=2.0
-            ).decode()
-            for line in output.splitlines():
-                if "pwr-state:" in line:
-                    state = line.split(":")[1].split("(")[0].strip()
-                    if state in ("on", "to-on"):
-                        log("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
-                        return
-                    break
-        except Exception as e:
-            log(f"CEC power state check failed: {e}")
+        if get_tv_power_state() in ("on", "to-on"):
+            log("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
+            return
 
         # 3. Instantly send WoL (non-blocking) in case it's in deep standby
         log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
@@ -207,12 +215,14 @@ class TVPowerSyncDaemon:
             log("[*] TV woken via WebSocket KEY_POWER (fast path).")
             return
 
-        # 5. Websocket failed — TV is in deep standby. WoL was already sent, just retry WebSocket to confirm.
+        # 5. Websocket failed — TV is in deep standby. WoL was already sent and is waking the TV.
+        # DO NOT send KEY_POWER again, as that would turn the waking TV back off!
+        # Instead, just wait and verify it woke up via CEC.
         for attempt in range(1, 11):
-            log(f"Wake attempt {attempt}/10: Checking WebSocket...")
+            log(f"Wake attempt {attempt}/10: Waiting for TV to wake via WoL...")
             time.sleep(2.0)
-            if send_tv_websocket_key("KEY_POWER"):
-                log(f"[*] TV woken via WoL + WebSocket on attempt {attempt}.")
+            if get_tv_power_state() in ("on", "to-on"):
+                log(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
                 return
             # Resend WoL just in case
             send_wol(TV_MAC, bursts=3, delay_between=0.05)
