@@ -211,18 +211,21 @@ class TVPowerSyncDaemon:
         send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
         # 4. Try websocket KEY_POWER (instant wake if TV network is still up)
-        if send_tv_websocket_key("KEY_POWER"):
+        if send_tv_websocket_key("KEY_HDMI"):
             log("[*] TV woken via WebSocket KEY_POWER (fast path).")
             return
 
-        # 5. Websocket failed — TV is in deep standby. WoL was already sent and is waking the TV.
-        # DO NOT send KEY_POWER again, as that would turn the waking TV back off!
-        # Instead, just wait and verify it woke up via CEC.
+        # 5. Websocket failed — TV is in deep standby. WoL was already sent.
+        # Retry WebSocket to force the panel on quickly as soon as the network stack boots.
         for attempt in range(1, 11):
-            log(f"Wake attempt {attempt}/10: Waiting for TV to wake via WoL...")
+            log(f"Wake attempt {attempt}/10: Checking WebSocket...")
             time.sleep(2.0)
-            if get_tv_power_state() in ("on", "to-on"):
+            state = get_tv_power_state()
+            if state in ("on", "to-on"):
                 log(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
+                return
+            if send_tv_websocket_key("KEY_HDMI"):
+                log(f"[*] TV woken via WebSocket KEY_POWER on attempt {attempt}.")
                 return
             # Resend WoL just in case
             send_wol(TV_MAC, bursts=3, delay_between=0.05)

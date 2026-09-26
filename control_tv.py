@@ -150,14 +150,17 @@ def wake_tv():
 
     from tv_power_daemon import send_tv_websocket_key
     
-    if send_tv_websocket_key("KEY_POWER"):
+    if send_tv_websocket_key("KEY_HDMI"):
         print("[*] TV woken via WebSocket KEY_POWER (fast path).")
     else:
         for attempt in range(1, 11):
-            print(f"[*] Wake attempt {attempt}/10: Waiting for TV to wake via WoL...")
+            print(f"[*] Wake attempt {attempt}/10: Checking WebSocket...")
             time.sleep(2.0)
             if get_tv_power_state() in ("on", "to-on"):
                 print(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
+                break
+            if send_tv_websocket_key("KEY_HDMI"):
+                print(f"[*] TV woken via WebSocket KEY_POWER on attempt {attempt}.")
                 break
             send_wol(TV_MAC, bursts=3, delay_between=0.05)
         else:
