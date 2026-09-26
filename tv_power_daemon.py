@@ -182,11 +182,7 @@ class TVPowerSyncDaemon:
         # 1. Turn on KDE DPMS so video signal is clocked immediately
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Instantly send WoL (non-blocking) in case it's in deep standby
-        log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
-        send_wol(TV_MAC, bursts=3, delay_between=0.05)
-
-        # 3. Check current power state via CEC to avoid toggling it OFF if it's already ON
+        # 2. Check current power state via CEC to avoid toggling it OFF if it's already ON
         try:
             output = subprocess.check_output(
                 ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
@@ -201,6 +197,10 @@ class TVPowerSyncDaemon:
                     break
         except Exception as e:
             log(f"CEC power state check failed: {e}")
+
+        # 3. Instantly send WoL (non-blocking) in case it's in deep standby
+        log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
+        send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
         # 4. Try websocket KEY_POWER (instant wake if TV network is still up)
         if send_tv_websocket_key("KEY_POWER"):

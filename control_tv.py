@@ -123,9 +123,6 @@ def wake_tv():
     print("[*] Initiating TV Wake Sequence...")
     run_cmd("kscreen-doctor --dpms on")
     
-    print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
-    send_wol(TV_MAC, bursts=3, delay_between=0.05)
-
     print("[*] Checking TV power state via CEC to prevent toggling it off...")
     try:
         output = subprocess.check_output(
@@ -143,6 +140,9 @@ def wake_tv():
                 break
     except Exception as e:
         print(f"[!] CEC power state check failed: {e}")
+
+    print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
+    send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
     from tv_power_daemon import send_tv_websocket_key
     
