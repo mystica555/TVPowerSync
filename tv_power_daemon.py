@@ -189,10 +189,10 @@ class TVPowerSyncDaemon:
         if self.state == "awake":
             return
 
-        # Ignore spurious wakes that happen within 10 seconds of turning off
+        # Ignore spurious wakes that happen within 6 seconds of turning off
         # (e.g. KDE reconfiguring screens when TV HDMI drops)
-        if hasattr(self, "last_off_time") and time.time() - self.last_off_time < 10.0:
-            log(f"--> [IGNORED WAKE] ({reason}) - Occurred within 10s of sleep. Forcing screen back to sleep.")
+        if hasattr(self, "last_off_time") and time.time() - self.last_off_time < 6.0:
+            log(f"--> [IGNORED WAKE] ({reason}) - Occurred within 6s of sleep. Forcing screen back to sleep.")
             run_cmd("kscreen-doctor --dpms off")
             return
 
