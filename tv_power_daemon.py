@@ -111,8 +111,8 @@ def send_tv_websocket_key(key="KEY_POWEROFF"):
     """Send remote control key over Samsung TV WebSocket interface using samsungtvws."""
     try:
         from samsungtvws import SamsungTVWS
-        # Initialize without a token (uses port 8001 by default)
-        tv = SamsungTVWS(TV_IP)
+        # Initialize with 2.0s timeout (uses port 8001 by default)
+        tv = SamsungTVWS(TV_IP, timeout=2.0)
         tv.shortcuts().remote.send_key(key)
         log(f"WebSocket remote keystroke '{key}' sent via samsungtvws.")
         return True
@@ -161,6 +161,7 @@ class TVPowerSyncDaemon:
             return
         log(f"--> [OFF DETECTED] ({reason})")
         self.state = "asleep"
+        self.last_off_time = time.time()
 
         # Only send KEY_POWER via websocket after DPMS off.
         send_tv_websocket_key("KEY_POWER")
@@ -168,25 +169,53 @@ class TVPowerSyncDaemon:
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
             return
+
+        # Ignore spurious wakes that happen within 10 seconds of turning off
+        # (e.g. KDE reconfiguring screens when TV HDMI drops)
+        if hasattr(self, "last_off_time") and time.time() - self.last_off_time < 10.0:
+            log(f"--> [IGNORED WAKE] ({reason}) - Occurred within 10s of sleep")
+            return
+
         log(f"--> [ON DETECTED] ({reason})")
         self.state = "awake"
 
         # 1. Turn on KDE DPMS so video signal is clocked immediately
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Try websocket KEY_POWER first (instant wake if TV network is still up)
+        # 2. Instantly send WoL (non-blocking) in case it's in deep standby
+        log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
+        send_wol(TV_MAC, bursts=3, delay_between=0.05)
+
+        # 3. Check current power state via CEC to avoid toggling it OFF if it's already ON
+        try:
+            output = subprocess.check_output(
+                ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
+                stderr=subprocess.STDOUT, timeout=2.0
+            ).decode()
+            for line in output.splitlines():
+                if "pwr-state:" in line:
+                    state = line.split(":")[1].split("(")[0].strip()
+                    if state in ("on", "to-on"):
+                        log("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
+                        return
+                    break
+        except Exception as e:
+            log(f"CEC power state check failed: {e}")
+
+        # 4. Try websocket KEY_POWER (instant wake if TV network is still up)
         if send_tv_websocket_key("KEY_POWER"):
             log("[*] TV woken via WebSocket KEY_POWER (fast path).")
             return
 
-        # 3. Websocket failed — TV is in deep standby. Use WoL + retry loop.
+        # 5. Websocket failed — TV is in deep standby. WoL was already sent, just retry WebSocket to confirm.
         for attempt in range(1, 11):
-            log(f"Wake attempt {attempt}/10: Sending WoL then checking WebSocket...")
-            send_wol(TV_MAC, bursts=3, delay_between=0.05)
+            log(f"Wake attempt {attempt}/10: Checking WebSocket...")
             time.sleep(2.0)
             if send_tv_websocket_key("KEY_POWER"):
                 log(f"[*] TV woken via WoL + WebSocket on attempt {attempt}.")
                 return
+            # Resend WoL just in case
+            send_wol(TV_MAC, bursts=3, delay_between=0.05)
         log("[!] TV failed to wake after 10 WoL attempts.")
 
     def poll_hardware_dpms(self) -> bool:

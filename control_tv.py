@@ -121,23 +121,41 @@ def get_status():
 
 def wake_tv():
     print("[*] Initiating TV Wake Sequence...")
-    # 1. Turn on KDE DPMS output first so GPU begins clocking signal
     run_cmd("kscreen-doctor --dpms on")
     
+    print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
+    send_wol(TV_MAC, bursts=3, delay_between=0.05)
+
+    print("[*] Checking TV power state via CEC to prevent toggling it off...")
+    try:
+        output = subprocess.check_output(
+            ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
+            stderr=subprocess.STDOUT, timeout=2.0
+        ).decode()
+        for line in output.splitlines():
+            if "pwr-state:" in line:
+                state = line.split(":")[1].split("(")[0].strip()
+                if state in ("on", "to-on"):
+                    print("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
+                    print("[*] TV Wake sequence completed.\n")
+                    get_status()
+                    return
+                break
+    except Exception as e:
+        print(f"[!] CEC power state check failed: {e}")
+
     from tv_power_daemon import send_tv_websocket_key
     
-    # 2. Try websocket KEY_POWER first (instant wake if TV network is still up)
     if send_tv_websocket_key("KEY_POWER"):
         print("[*] TV woken via WebSocket KEY_POWER (fast path).")
     else:
-        # 3. Websocket failed — TV is in deep standby. Use WoL + retry loop.
         for attempt in range(1, 11):
-            print(f"[*] Wake attempt {attempt}/10: Sending WoL then checking WebSocket...")
-            send_wol(TV_MAC, bursts=3, delay_between=0.05)
+            print(f"[*] Wake attempt {attempt}/10: Checking WebSocket...")
             time.sleep(2.0)
             if send_tv_websocket_key("KEY_POWER"):
                 print(f"[*] TV woken via WoL + WebSocket on attempt {attempt}.")
                 break
+            send_wol(TV_MAC, bursts=3, delay_between=0.05)
         else:
             print("[!] TV failed to wake after 10 WoL attempts.")
 
@@ -148,12 +166,7 @@ def standby_tv():
     print("[*] Initiating TV Standby Sequence...")
     from tv_power_daemon import send_tv_websocket_key
 
-    # 1. Send KEY_POWER via websocket FIRST while TV can still hear us
-    print("[*] Sending KEY_POWER via WebSocket...")
-    send_tv_websocket_key("KEY_POWER")
-    
-    # 2. Turn off DPMS (daemon will also try KEY_POWER but TV is already off,
-    #    so the toggle won't fire again since the websocket will be refused)
+    # Turn off DPMS (daemon will handle the KEY_POWER securely using CEC checks)
     run_cmd("kscreen-doctor --dpms off")
     
     print("[*] Waiting 4 seconds for TV network stack to spin down...")
