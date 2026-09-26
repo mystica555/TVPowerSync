@@ -124,7 +124,7 @@ def get_tv_power_state() -> str:
     try:
         output = subprocess.check_output(
             ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
-            stderr=subprocess.STDOUT, timeout=2.0
+            stderr=subprocess.STDOUT, timeout=3.0
         ).decode()
         for line in output.splitlines():
             if "pwr-state:" in line:

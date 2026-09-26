@@ -112,7 +112,7 @@ def send_tv_websocket_key(key="KEY_POWEROFF"):
     try:
         from samsungtvws import SamsungTVWS
         # Initialize with 2.0s timeout (uses port 8001 by default)
-        tv = SamsungTVWS(TV_IP, timeout=2.0)
+        tv = SamsungTVWS(TV_IP, timeout=3.0)
         tv.shortcuts().remote.send_key(key)
         log(f"WebSocket remote keystroke '{key}' sent via samsungtvws.")
         return True
@@ -145,7 +145,7 @@ def get_tv_power_state() -> str:
         import subprocess
         output = subprocess.check_output(
             ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
-            stderr=subprocess.STDOUT, timeout=2.0
+            stderr=subprocess.STDOUT, timeout=3.0
         ).decode()
         for line in output.splitlines():
             if "pwr-state:" in line:
@@ -189,10 +189,10 @@ class TVPowerSyncDaemon:
         if self.state == "awake":
             return
 
-        # Ignore spurious wakes that happen within 6 seconds of turning off
+        # Ignore spurious wakes that happen within 4.5 seconds of turning off
         # (e.g. KDE reconfiguring screens when TV HDMI drops)
-        if hasattr(self, "last_off_time") and time.time() - self.last_off_time < 6.0:
-            log(f"--> [IGNORED WAKE] ({reason}) - Occurred within 6s of sleep. Forcing screen back to sleep.")
+        if hasattr(self, "last_off_time") and time.time() - self.last_off_time < 4.5:
+            log(f"--> [IGNORED WAKE] ({reason}) - Occurred within 4.5s of sleep. Forcing screen back to sleep.")
             run_cmd("kscreen-doctor --dpms off")
             return
 
