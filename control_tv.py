@@ -119,11 +119,8 @@ def get_status():
     else:
         print(f"TV network interface ({TV_IP}:8001) is ASLEEP / unreachable.")
 
-def wake_tv():
-    print("[*] Initiating TV Wake Sequence...")
-    run_cmd("kscreen-doctor --dpms on")
-    
-    print("[*] Checking TV power state via CEC to prevent toggling it off...")
+def get_tv_power_state() -> str:
+    """Uses cec-ctl to get the current power state of the TV."""
     try:
         output = subprocess.check_output(
             ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
@@ -131,15 +128,22 @@ def wake_tv():
         ).decode()
         for line in output.splitlines():
             if "pwr-state:" in line:
-                state = line.split(":")[1].split("(")[0].strip()
-                if state in ("on", "to-on"):
-                    print("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
-                    print("[*] TV Wake sequence completed.\n")
-                    get_status()
-                    return
-                break
-    except Exception as e:
-        print(f"[!] CEC power state check failed: {e}")
+                return line.split(":")[1].split("(")[0].strip()
+        return "offline"
+    except Exception:
+        return "offline"
+
+
+def wake_tv():
+    print("[*] Initiating TV Wake Sequence...")
+    run_cmd("kscreen-doctor --dpms on")
+    
+    print("[*] Checking TV power state via CEC to prevent toggling it off...")
+    if get_tv_power_state() in ("on", "to-on"):
+        print("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
+        print("[*] TV Wake sequence completed.\n")
+        get_status()
+        return
 
     print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
@@ -150,10 +154,10 @@ def wake_tv():
         print("[*] TV woken via WebSocket KEY_POWER (fast path).")
     else:
         for attempt in range(1, 11):
-            print(f"[*] Wake attempt {attempt}/10: Checking WebSocket...")
+            print(f"[*] Wake attempt {attempt}/10: Waiting for TV to wake via WoL...")
             time.sleep(2.0)
-            if send_tv_websocket_key("KEY_POWER"):
-                print(f"[*] TV woken via WoL + WebSocket on attempt {attempt}.")
+            if get_tv_power_state() in ("on", "to-on"):
+                print(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
                 break
             send_wol(TV_MAC, bursts=3, delay_between=0.05)
         else:
