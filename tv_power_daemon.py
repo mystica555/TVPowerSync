@@ -197,21 +197,14 @@ class TVPowerSyncDaemon:
         log(f"--> [ON DETECTED] ({reason})")
         self.state = "awake"
 
-        # 1. Turn on KDE DPMS so video signal is clocked immediately
-        run_cmd("kscreen-doctor --dpms on")
+        # 1. Turn on KDE DPMS asynchronously so it doesn't delay network commands
+        run_cmd_async("kscreen-doctor --dpms on")
 
-        # 2. Check current power state via CEC to avoid toggling if already on
-        state = get_tv_power_state()
-        if state in ("on", "to-on"):
-            log("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
-            return
-
-        # 3. Instantly send WoL (non-blocking) in case it's in deep standby
+        # 2. Instantly send WoL across all NICs (non-blocking, prepares deep standby wake)
         log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
         send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
-        # 4. Try websocket KEY_POWER (fast path from shallow standby)
-        # If the TV is in shallow standby, port 8001 is open and this immediately wakes it!
+        # 3. Try websocket KEY_POWER immediately (instant wake from shallow standby)
         if send_tv_websocket_key("KEY_POWER"):
             log("[*] TV woken via WebSocket KEY_POWER (fast path).")
             return
@@ -241,8 +234,10 @@ class TVPowerSyncDaemon:
 
     def on_screensaver_active_changed(self, active: bool):
         if active:
-            # Screensaver locked/active; check if display is also turning off
             log("KDE ScreenSaver ActiveChanged: TRUE (locked)")
+            # Instantly turn off display & TV without waiting for KDE 2s DPMS timeout
+            run_cmd_async("kscreen-doctor --dpms off")
+            self.handle_screen_off("KDE ScreenSaver Locked")
         else:
             log("KDE ScreenSaver ActiveChanged: FALSE (unlocked)")
             self.handle_screen_on("KDE ScreenSaver Unlocked")

@@ -138,14 +138,6 @@ def wake_tv():
     print("[*] Initiating TV Wake Sequence...")
     run_cmd("kscreen-doctor --dpms on")
     
-    print("[*] Checking TV power state via CEC to prevent toggling it off...")
-    state = get_tv_power_state()
-    if state in ("on", "to-on"):
-        print("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
-        print("[*] TV Wake sequence completed.\n")
-        get_status()
-        return
-
     print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
