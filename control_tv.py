@@ -168,7 +168,12 @@ def standby_tv():
 
     # Turn off DPMS
     run_cmd("kscreen-doctor --dpms off")
-    send_tv_websocket_key("KEY_POWER")
+
+    tv_state = get_tv_power_state()
+    if tv_state in ("standby", "to-standby"):
+        print(f"[*] TV is already in {tv_state}. Skipping WebSocket power toggle.")
+    else:
+        send_tv_websocket_key("KEY_POWER")
     
     print("[*] Waiting 4 seconds for TV network stack to spin down...")
     time.sleep(4)

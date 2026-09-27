@@ -182,22 +182,33 @@ class TVPowerSyncDaemon:
         self.state = "asleep"
         self.last_off_time = time.time()
 
-        # Only send KEY_POWER via websocket after DPMS off.
+        # Check if TV is already in standby before sending toggle key.
+        # This prevents accidental wake if the TV is already powered off.
+        tv_state = get_tv_power_state()
+        if tv_state in ("standby", "to-standby"):
+            log(f"[*] TV is already in {tv_state}. Skipping WebSocket power toggle.")
+            return
+
         send_tv_websocket_key("KEY_POWER")
 
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
             return
 
-        # Ignore spurious wakes that happen within 1.0s of sleep (e.g. kernel modesetting glitch)
-        if hasattr(self, "last_off_time") and time.time() - self.last_off_time < 1.0:
-            log(f"--> [IGNORED WAKE] ({reason}) - Occurred within 1.0s of sleep.")
-            return
-
         log(f"--> [ON DETECTED] ({reason})")
         self.state = "awake"
 
-        # 1. Turn on KDE DPMS asynchronously so it doesn't delay network commands
+        # 1. The Samsung TV takes ~2.5s to complete its internal power-down cycle.
+        # If the user wakes the screen too soon, wait out the remaining shutdown window
+        # so the wake keystroke is not dropped by the busy TV micro-controller.
+        if hasattr(self, "last_off_time"):
+            elapsed = time.time() - self.last_off_time
+            if elapsed < 2.5:
+                wait_time = 2.5 - elapsed
+                log(f"[*] Wake requested {elapsed:.2f}s after sleep. Waiting {wait_time:.2f}s for TV shutdown cycle to complete...")
+                time.sleep(wait_time)
+
+        # 2. Turn on KDE DPMS asynchronously so it doesn't delay network commands
         run_cmd_async("kscreen-doctor --dpms on")
 
         # 2. Instantly send WoL across all NICs (non-blocking, prepares deep standby wake)
