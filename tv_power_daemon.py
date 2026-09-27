@@ -202,8 +202,9 @@ class TVPowerSyncDaemon:
         # 1. Turn on KDE DPMS so video signal is clocked immediately
         run_cmd("kscreen-doctor --dpms on")
 
-        # 2. Check current power state via CEC to avoid toggling it OFF if it's already ON
-        if get_tv_power_state() in ("on", "to-on"):
+        # 2. Check current power state via CEC
+        state = get_tv_power_state()
+        if state in ("on", "to-on"):
             log("[*] TV is already awake (via CEC). Skipping WebSocket power toggle.")
             return
 
@@ -211,22 +212,20 @@ class TVPowerSyncDaemon:
         log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
         send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
-        # 4. Try websocket KEY_POWER (instant wake if TV network is still up)
-        if send_tv_websocket_key("KEY_HDMI"):
-            log("[*] TV woken via WebSocket KEY_POWER (fast path).")
-            return
-
-        # 5. Websocket failed — TV is in deep standby. WoL was already sent.
-        # Retry WebSocket to force the panel on quickly as soon as the network stack boots.
-        for attempt in range(1, 11):
-            log(f"Wake attempt {attempt}/10: Checking WebSocket...")
-            time.sleep(2.0)
-            state = get_tv_power_state()
-            if state in ("on", "to-on"):
-                log(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
+        # 4. If TV is explicitly in shallow standby, we MUST use KEY_POWER to wake it.
+        # If state is 'offline', it's either deep sleep (WoL wakes it) or already on (buggy CEC).
+        # We DO NOT send KEY_POWER if 'offline' to prevent accidentally toggling it off.
+        if state == "standby":
+            if send_tv_websocket_key("KEY_POWER"):
+                log("[*] TV woken via WebSocket KEY_POWER (fast path from shallow standby).")
                 return
-            if send_tv_websocket_key("KEY_HDMI"):
-                log(f"[*] TV woken via WebSocket KEY_POWER on attempt {attempt}.")
+
+        # 5. Fallback loop for deep standby (waiting for WoL to wake it)
+        for attempt in range(1, 11):
+            log(f"Wake attempt {attempt}/10: Waiting for TV to wake via WoL...")
+            time.sleep(2.0)
+            if get_tv_power_state() in ("on", "to-on"):
+                log(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
                 return
             # Resend WoL just in case
             send_wol(TV_MAC, bursts=3, delay_between=0.05)
