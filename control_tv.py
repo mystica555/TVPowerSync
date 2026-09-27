@@ -138,6 +138,9 @@ def wake_tv():
     print("[*] Initiating TV Wake Sequence...")
     run_cmd("kscreen-doctor --dpms on")
     
+    # Transmit HDMI-CEC IMAGE_VIEW_ON in parallel
+    run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on")
+
     print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
 

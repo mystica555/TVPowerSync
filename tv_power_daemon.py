@@ -180,16 +180,18 @@ class TVPowerSyncDaemon:
             return
         log(f"--> [OFF DETECTED] ({reason})")
         self.state = "asleep"
-        self.last_off_time = time.time()
 
         # Check if TV is already in standby before sending toggle key.
         # This prevents accidental wake if the TV is already powered off.
         tv_state = get_tv_power_state()
         if tv_state in ("standby", "to-standby"):
             log(f"[*] TV is already in {tv_state}. Skipping WebSocket power toggle.")
+            self.last_off_time = time.time()
             return
 
         send_tv_websocket_key("KEY_POWER")
+        # Record last_off_time AFTER transmission so shutdown settling is accurately measured
+        self.last_off_time = time.time()
 
     def handle_screen_on(self, reason: str):
         if self.state == "awake":
@@ -198,20 +200,23 @@ class TVPowerSyncDaemon:
         log(f"--> [ON DETECTED] ({reason})")
         self.state = "awake"
 
-        # 1. The Samsung TV takes ~2.5s to complete its internal power-down cycle.
+        # 1. The Samsung TV takes ~3.0s from command delivery to complete its internal shutdown.
         # If the user wakes the screen too soon, wait out the remaining shutdown window
         # so the wake keystroke is not dropped by the busy TV micro-controller.
         if hasattr(self, "last_off_time"):
             elapsed = time.time() - self.last_off_time
-            if elapsed < 2.5:
-                wait_time = 2.5 - elapsed
+            if elapsed < 3.0:
+                wait_time = 3.0 - elapsed
                 log(f"[*] Wake requested {elapsed:.2f}s after sleep. Waiting {wait_time:.2f}s for TV shutdown cycle to complete...")
                 time.sleep(wait_time)
 
         # 2. Turn on KDE DPMS asynchronously so it doesn't delay network commands
         run_cmd_async("kscreen-doctor --dpms on")
 
-        # 2. Instantly send WoL across all NICs (non-blocking, prepares deep standby wake)
+        # 3. Transmit HDMI-CEC IMAGE_VIEW_ON in parallel to trigger direct hardware display wake
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on")
+
+        # 4. Instantly send WoL across all NICs (non-blocking, prepares deep standby wake)
         log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
         send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
