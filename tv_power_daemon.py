@@ -219,8 +219,8 @@ class TVPowerSyncDaemon:
         # 2. Turn on KDE DPMS asynchronously so it doesn't delay network commands
         run_cmd_async("kscreen-doctor --dpms on")
 
-        # 3. Transmit HDMI-CEC IMAGE_VIEW_ON in parallel to trigger direct hardware display wake
-        run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on")
+        # 3. Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE in parallel to trigger direct hardware display wake to HDMI 1
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
         # 4. Instantly send WoL across all NICs (non-blocking, prepares deep standby wake)
         log("Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")

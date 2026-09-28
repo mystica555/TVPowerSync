@@ -83,6 +83,10 @@ def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
 def run_cmd(cmd, check=False):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True, check=check)
 
+def run_cmd_async(cmd: str):
+    import threading
+    threading.Thread(target=lambda: subprocess.run(cmd, shell=True, capture_output=True), daemon=True).start()
+
 def get_status():
     print("=== Display Power Management (DPMS) ===")
     p = run_cmd("kscreen-doctor --dpms show")
@@ -138,8 +142,8 @@ def wake_tv():
     print("[*] Initiating TV Wake Sequence...")
     run_cmd("kscreen-doctor --dpms on")
     
-    # Transmit HDMI-CEC IMAGE_VIEW_ON in parallel
-    run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on")
+    # Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE in parallel to select HDMI 1
+    run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
     print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
