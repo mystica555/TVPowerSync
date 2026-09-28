@@ -154,48 +154,6 @@ def get_tv_power_state() -> str:
     except Exception:
         return "offline"
 
-class UserActivityTracker:
-    """Monitors Linux input subsystem (/dev/input/mice and keyboards) in real time
-    to detect genuine physical user interactions vs synthetic KDE display events.
-    """
-    def __init__(self):
-        self.last_input_time = 0.0
-        self._running = True
-        self.thread = threading.Thread(target=self._run, daemon=True)
-        self.thread.start()
-
-    def _run(self):
-        fds = {}
-        try:
-            fd = os.open("/dev/input/mice", os.O_RDONLY | os.O_NONBLOCK)
-            fds[fd] = "mice"
-        except Exception:
-            pass
-
-        for p in glob.glob("/dev/input/by-path/*-kbd"):
-            try:
-                fd = os.open(p, os.O_RDONLY | os.O_NONBLOCK)
-                fds[fd] = p
-            except Exception:
-                pass
-
-        while self._running:
-            try:
-                if not fds:
-                    time.sleep(1.0)
-                    continue
-                r, _, _ = select.select(list(fds.keys()), [], [], 0.5)
-                now = time.time()
-                for fd in r:
-                    try:
-                        os.read(fd, 64)
-                        self.last_input_time = now
-                    except Exception:
-                        pass
-            except Exception:
-                time.sleep(0.5)
-
-
 class TVPowerSyncDaemon:
 
     def __init__(self):
@@ -209,7 +167,6 @@ class TVPowerSyncDaemon:
         self.state = "awake" if initial_hw == "On" else "asleep"
         self.last_hw_dpms = initial_hw
         self.is_locked = False
-        self.tracker = UserActivityTracker()
         log(f"Initial display power state: {self.state.upper()} (hardware: {initial_hw})")
 
     def read_hardware_dpms(self) -> str:
@@ -294,14 +251,6 @@ class TVPowerSyncDaemon:
             if current_hw == "Off":
                 self.handle_screen_off("Laptop display DPMS went Off (hardware)")
             elif current_hw == "On":
-                # Check for spurious TV-disconnect HDMI bounce (occurs within 6s of turning off TV)
-                if self.state == "asleep" and hasattr(self, "last_off_time") and (time.time() - self.last_off_time < 6.0):
-                    # Check if genuine user mouse/keyboard input was detected
-                    time_since_input = time.time() - self.tracker.last_input_time
-                    if time_since_input > 1.0:
-                        log(f"[*] Spurious DPMS On without user input ({time_since_input:.1f}s since last input). Forcing display back to sleep.")
-                        run_cmd_async("kscreen-doctor --dpms off")
-                        return True
                 self.handle_screen_on("Laptop display DPMS went On (hardware)")
         return True  # Keep GLib timer active
 
