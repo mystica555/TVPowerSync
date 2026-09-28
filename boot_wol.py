@@ -16,16 +16,37 @@ TV_IP = "192.168.0.2"
 TV_MAC = "40:16:3b:d0:4f:8b"
 CEC_DEVICE = "/dev/cec0"
 
-def is_tv_connected() -> bool:
-    """Check if TV is physically plugged into a display port."""
+def is_tv_connected() -> tuple[bool, str]:
+    """Check if TV/adapter is physically plugged in or on home network."""
+    # 1. Check if DRM reports connected
     for p in glob.glob("/sys/class/drm/*-DP-*/status") + glob.glob("/sys/class/drm/*-HDMI-*/status"):
         try:
             with open(p, "r") as f:
                 if f.read().strip() == "connected":
-                    return True
+                    return True, f"DRM port connected ({p})"
         except Exception:
             pass
-    return False
+
+    # 2. Check if USB-C dock / DisplayPort adapter or hub is present
+    for p in glob.glob("/sys/bus/usb/devices/*/idVendor"):
+        try:
+            with open(p, "r") as f:
+                vid = f.read().strip().lower()
+                # 2109 = VIA Labs (dock/hub/billboard), 0bda = Realtek dock ethernet
+                if vid in ("2109", "0bda"):
+                    return True, f"USB display adapter/dock detected (vendor ID {vid})"
+        except Exception:
+            pass
+
+    # 3. Check if local network is on 192.168.0.x (home network)
+    try:
+        out = subprocess.run(["ip", "-o", "-4", "addr", "show"], capture_output=True, text=True).stdout
+        if "192.168.0." in out:
+            return True, "Home network detected (192.168.0.x)"
+    except Exception:
+        pass
+
+    return False, "No external display, dock, or home network detected"
 
 def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
@@ -83,16 +104,21 @@ def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     return True
 
 def main():
-    if not is_tv_connected():
-        print("[*] TV/external display is not connected. Skipping boot wake.")
+    connected, reason = is_tv_connected()
+    if not connected:
+        print(f"[*] Skipping boot wake: {reason}")
         return
 
-    print("[*] External display connection detected on DRM port.")
+    print(f"[*] Boot wake triggered: {reason}")
     print("[*] Sending rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
 
     if os.path.exists(CEC_DEVICE):
-        subprocess.run(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0", shell=True, capture_output=True)
+        res = subprocess.run(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0", shell=True, capture_output=True, text=True)
+        if res.returncode == 0:
+            print("[*] Sent HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE to TV.")
+        else:
+            print(f"[!] CEC transmission returned code {res.returncode}")
 
     print("[*] Boot wake sequence completed.")
 

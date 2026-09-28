@@ -162,12 +162,31 @@ class TVPowerSyncDaemon:
         self.edp_dpms_path = candidates[0] if candidates else "/sys/class/drm/card1-eDP-1/dpms"
         log(f"Monitoring hardware display power at: {self.edp_dpms_path}")
 
+        # Locate external display status node (eDP, DP-2, etc.)
+        dp_candidates = glob.glob("/sys/class/drm/*-DP-*/status")
+        self.dp_status_path = dp_candidates[0] if dp_candidates else None
+        self.last_dp_status = self.read_dp_status()
+
         # Initial state
         initial_hw = self.read_hardware_dpms()
-        self.state = "awake" if initial_hw == "On" else "asleep"
         self.last_hw_dpms = initial_hw
         self.is_locked = False
-        log(f"Initial display power state: {self.state.upper()} (hardware: {initial_hw})")
+        log(f"Initial display power state: (hardware: {initial_hw}, DP: {self.last_dp_status})")
+
+        if initial_hw == "On":
+            tv_state = get_tv_power_state()
+            log(f"Initial TV power state via CEC: {tv_state}")
+            if tv_state in ("standby", "to-standby", "offline"):
+                log("[*] Laptop display is ON but TV is not awake at startup. Scheduling initial wake...")
+                self.state = "asleep"
+                def _initial_sync():
+                    self.handle_screen_on("Startup initial sync")
+                    return False
+                GLib.idle_add(_initial_sync)
+            else:
+                self.state = "awake"
+        else:
+            self.state = "asleep"
 
     def read_hardware_dpms(self) -> str:
         try:
@@ -175,6 +194,15 @@ class TVPowerSyncDaemon:
                 return f.read().strip()
         except Exception:
             return "Unknown"
+
+    def read_dp_status(self) -> str:
+        if self.dp_status_path:
+            try:
+                with open(self.dp_status_path, "r") as f:
+                    return f.read().strip()
+            except Exception:
+                pass
+        return "disconnected"
 
     def handle_screen_off(self, reason: str):
         if self.state == "asleep":
@@ -243,7 +271,7 @@ class TVPowerSyncDaemon:
         log("[!] TV failed to wake after 10 WoL attempts.")
 
     def poll_hardware_dpms(self) -> bool:
-        """Periodic fast poll of hardware DPMS sysfs node (every 150ms)."""
+        """Periodic fast poll of hardware DPMS sysfs node and DP connection (every 150ms)."""
         current_hw = self.read_hardware_dpms()
         if current_hw != self.last_hw_dpms:
             log(f"Hardware DPMS transition: {self.last_hw_dpms} -> {current_hw}")
@@ -252,6 +280,16 @@ class TVPowerSyncDaemon:
                 self.handle_screen_off("Laptop display DPMS went Off (hardware)")
             elif current_hw == "On":
                 self.handle_screen_on("Laptop display DPMS went On (hardware)")
+
+        current_dp = self.read_dp_status()
+        if current_dp != self.last_dp_status:
+            log(f"DisplayPort connection transition: {self.last_dp_status} -> {current_dp}")
+            self.last_dp_status = current_dp
+            if current_dp == "connected" and self.state == "awake":
+                log("[*] External TV connected or hotplug detected while awake. Syncing DPMS and active source...")
+                run_cmd_async("kscreen-doctor --dpms on")
+                run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+
         return True  # Keep GLib timer active
 
     def on_screensaver_active_changed(self, active: bool):
