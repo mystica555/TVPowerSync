@@ -309,8 +309,6 @@ class TVPowerSyncDaemon:
         if active:
             log("KDE ScreenSaver ActiveChanged: TRUE (locked)")
             self.is_locked = True
-            run_cmd_async("kscreen-doctor --dpms off")
-            self.handle_screen_off("KDE ScreenSaver Locked")
         else:
             log("KDE ScreenSaver ActiveChanged: FALSE (unlocked)")
             if getattr(self, "is_locked", False):
