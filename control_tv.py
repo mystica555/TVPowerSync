@@ -145,6 +145,14 @@ def wake_tv():
     # Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE in parallel to select HDMI 1
     run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
+    # Check if TV is already awake before sending toggle key!
+    tv_state = get_tv_power_state()
+    if tv_state in ("on", "to-on"):
+        print(f"[*] TV is already in '{tv_state}'. Skipping WebSocket KEY_POWER toggle to avoid inverting power state.")
+        print("[*] TV Wake sequence completed.\n")
+        get_status()
+        return
+
     print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
     send_wol(TV_MAC, bursts=3, delay_between=0.05)
 

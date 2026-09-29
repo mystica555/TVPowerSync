@@ -103,7 +103,22 @@ def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     print(f"[*] Gratuitous Wake-on-LAN packets sent across all NICs to {mac} ({bursts} bursts)")
     return True
 
+def is_laptop_display_off() -> bool:
+    """Check if laptop screen is in hardware DPMS Off state (sleeping/locked)."""
+    for p in glob.glob("/sys/class/drm/*-eDP-*/dpms"):
+        try:
+            with open(p, "r") as f:
+                if f.read().strip() == "Off":
+                    return True
+        except Exception:
+            pass
+    return False
+
 def main():
+    if is_laptop_display_off():
+        print("[*] Laptop display is in hardware DPMS Off (sleeping). Skipping boot wake.")
+        return
+
     connected, reason = is_tv_connected()
     if not connected:
         print(f"[*] Skipping boot wake: {reason}")

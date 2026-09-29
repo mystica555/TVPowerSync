@@ -37,15 +37,19 @@ systemctl --user enable tv-power-sync.service
 systemctl --user restart tv-power-sync.service
 echo "  User service tv-power-sync.service reloaded and restarted."
 
-# 4. Deploy system boot service, NetworkManager dispatcher, and udev rules (system-level)
-echo -e "\n[*] Deploying system boot service, NetworkManager dispatcher, and udev rules..."
+# 4. Deploy system boot service and udev rules (system-level)
+echo -e "\n[*] Deploying system boot service and udev rules..."
 if command -v sudo >/dev/null 2>&1; then
     sudo cp "$REPO_DIR/systemd/tv-boot-wol.service" /etc/systemd/system/tv-boot-wol.service
-    sudo cp "$REPO_DIR/networkmanager/99-tv-boot-wol.sh" /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
-    sudo chmod 755 /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
     sudo systemctl daemon-reload
     sudo systemctl enable tv-boot-wol.service
-    echo "  System service tv-boot-wol.service and NetworkManager hook updated."
+    echo "  System service tv-boot-wol.service updated."
+
+    # Remove redundant NetworkManager dispatcher script if present (prevents waking on DHCP lease renewals)
+    if [ -f /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh ]; then
+        sudo rm -f /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
+        echo "  Removed legacy NetworkManager DHCP hook (prevents spurious wake on DHCP renewal)."
+    fi
 
     if [ -d "$REPO_DIR/udev" ]; then
         sudo cp "$REPO_DIR"/udev/*.rules /etc/udev/rules.d/
