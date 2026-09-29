@@ -45,10 +45,10 @@ if command -v sudo >/dev/null 2>&1; then
     sudo systemctl enable tv-boot-wol.service
     echo "  System service tv-boot-wol.service updated."
 
-    if [ -f "$REPO_DIR/networkmanager/99-tv-boot-wol.sh" ]; then
-        sudo cp "$REPO_DIR/networkmanager/99-tv-boot-wol.sh" /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
-        sudo chmod 755 /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
-        echo "  Singleton NetworkManager boot dispatcher hook deployed."
+    # Ensure no legacy NetworkManager dispatcher scripts remain (all boot wake handled natively by systemd)
+    if [ -f /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh ]; then
+        sudo rm -f /etc/NetworkManager/dispatcher.d/99-tv-boot-wol.sh
+        echo "  Removed legacy NetworkManager dispatcher hook."
     fi
 
     if [ -d "$REPO_DIR/udev" ]; then

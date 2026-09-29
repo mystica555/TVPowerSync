@@ -8,7 +8,7 @@ Before=display-manager.service sddm.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/home/mike/.local/bin/boot_wol.py
-TimeoutSec=5
+TimeoutSec=10
 
 [Install]
 WantedBy=multi-user.target
