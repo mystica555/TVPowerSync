@@ -103,6 +103,23 @@ def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
     print(f"[*] Gratuitous Wake-on-LAN packets sent across all NICs to {mac} ({bursts} bursts)")
     return True
 
+BOOT_FLAGS = ["/run/tv_boot_wol.done", "/tmp/tv_boot_wol.done"]
+
+def is_boot_wake_done() -> bool:
+    """Check if boot wake has already run during this boot session."""
+    return any(os.path.exists(p) for p in BOOT_FLAGS)
+
+def mark_boot_wake_done(reason: str):
+    """Mark singleton boot flag across /run and /tmp so it only executes once per boot."""
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    for p in BOOT_FLAGS:
+        try:
+            with open(p, "w") as f:
+                f.write(f"Triggered at {timestamp} via {reason}\n")
+            os.chmod(p, 0o644)
+        except Exception:
+            pass
+
 def is_laptop_display_off() -> bool:
     """Check if laptop screen is in hardware DPMS Off state (sleeping/locked)."""
     for p in glob.glob("/sys/class/drm/*-eDP-*/dpms"):
@@ -115,7 +132,13 @@ def is_laptop_display_off() -> bool:
     return False
 
 def main():
-    if is_laptop_display_off():
+    force = "--force" in sys.argv
+
+    if not force and is_boot_wake_done():
+        print("[*] TV boot wake already completed for this boot session. Skipping (use --force to override).")
+        return
+
+    if not force and is_laptop_display_off():
         print("[*] Laptop display is in hardware DPMS Off (sleeping). Skipping boot wake.")
         return
 
@@ -123,6 +146,9 @@ def main():
     if not connected:
         print(f"[*] Skipping boot wake: {reason}")
         return
+
+    # Mark singleton flag immediately
+    mark_boot_wake_done(reason)
 
     print(f"[*] Boot wake triggered: {reason}")
     print("[*] Sending rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
