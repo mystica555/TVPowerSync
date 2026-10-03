@@ -158,8 +158,9 @@ def wake_tv():
     # Check if TV is already awake before sending commands
     tv_state = get_tv_power_state()
     if tv_state in ("on", "to-on"):
-        print(f"[*] TV is already '{tv_state}'. Re-asserting HDMI active source and DPMS.")
-        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+        print(f"[*] TV is already '{tv_state}'. Re-asserting HDMI active source and DPMS...")
+        run_cmd_async("kscreen-doctor output.DP-2.mode.1")
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
         print("[*] TV Wake sequence completed.\n")
         get_status()
         return
@@ -169,18 +170,19 @@ def wake_tv():
 
     # Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE (phys-addr=1.0.0.0)
     # Note: We do NOT send WebSocket KEY_POWER in the wake sequence to prevent accidental power inversion.
-    run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+    run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
 
     for attempt in range(1, 11):
         print(f"[*] Wake attempt {attempt}/10: Waiting for TV to wake via WoL/CEC...")
         time.sleep(1.5)
         current_state = get_tv_power_state()
         if current_state in ("on", "to-on"):
-            print(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}.")
-            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+            print(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. Syncing video stream...")
+            run_cmd_async("kscreen-doctor output.DP-2.mode.1")
+            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
             break
         send_wol(TV_MAC, bursts=4, delay_between=0.05)
-        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
     else:
         print("[!] TV failed to wake after 10 WoL attempts.")
 

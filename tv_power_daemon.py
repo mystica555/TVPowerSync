@@ -221,6 +221,19 @@ class TVPowerSyncDaemon:
         except Exception:
             return "Unknown"
 
+    def get_external_connector_name(self) -> str:
+        """Find the active external connector name (e.g. 'DP-2', 'DP-1', 'HDMI-A-1')."""
+        for p in glob.glob("/sys/class/drm/*-DP-*/status") + glob.glob("/sys/class/drm/*-HDMI-*/status"):
+            try:
+                with open(p, "r") as f:
+                    if f.read().strip() == "connected":
+                        parts = os.path.basename(os.path.dirname(p)).split("-", 1)
+                        if len(parts) == 2:
+                            return parts[1]
+            except Exception:
+                pass
+        return "DP-2"
+
     def read_external_display_status(self) -> str:
         """Check all DisplayPort and HDMI connectors for an active connection."""
         for p in glob.glob("/sys/class/drm/*-DP-*/status") + glob.glob("/sys/class/drm/*-HDMI-*/status"):
@@ -277,12 +290,14 @@ class TVPowerSyncDaemon:
 
         # 2. Turn on KDE DPMS
         run_cmd_async("kscreen-doctor --dpms on")
+        ext_conn = self.get_external_connector_name()
 
         # 3. Check if TV is already confirmed awake
         tv_state = get_tv_power_state()
         if tv_state in ("on", "to-on"):
-            log(f"[*] TV is already '{tv_state}'. Re-asserted HDMI active source and DPMS.")
-            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+            log(f"[*] TV is already '{tv_state}'. Re-asserting HDMI active source and display mode...")
+            run_cmd_async(f"kscreen-doctor output.{ext_conn}.mode.1")
+            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
             return
 
         # 4. Broadcast rapid Wake-on-LAN bursts across all NICs (5 bursts for deep standby wake)
@@ -292,7 +307,7 @@ class TVPowerSyncDaemon:
         # 5. Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE (phys-addr=1.0.0.0)
         # Note: Both WoL and IMAGE_VIEW_ON are completely discrete commands.
         # We do NOT send WebSocket KEY_POWER in the wake sequence to prevent accidental power inversion.
-        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
 
         # 6. Verification and retry loop for deep standby (waiting for WoL / hardware boot)
         for attempt in range(1, 11):
@@ -300,11 +315,13 @@ class TVPowerSyncDaemon:
             time.sleep(1.5)
             current_state = get_tv_power_state()
             if current_state in ("on", "to-on"):
-                log(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}.")
-                run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+                log(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. Syncing video stream and active source...")
+                # Re-assert mode on external display NOW that the TV HDMI sink is awake and ready
+                run_cmd_async(f"kscreen-doctor output.{ext_conn}.mode.1")
+                run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
                 return
             send_wol(TV_MAC, bursts=4, delay_between=0.05)
-            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
+            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
 
         log("[!] Decisive wake sequence did not detect TV awake after 10 attempts. Backing off for 60s.")
         self.wake_backoff_until = time.time() + 60.0
