@@ -123,8 +123,17 @@ def get_status():
     else:
         print(f"TV network interface ({TV_IP}:8001) is ASLEEP / unreachable.")
 
+def is_tv_network_awake(timeout=0.4) -> bool:
+    """Check if TV network port 8001 is open (listening)."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(timeout)
+            return s.connect_ex((TV_IP, 8001)) == 0
+    except Exception:
+        return False
+
 def get_tv_power_state() -> str:
-    """Uses cec-ctl to get the current power state of the TV."""
+    """Uses cec-ctl to get the current power state of the TV, falling back to network reachability."""
     try:
         output = subprocess.check_output(
             ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
@@ -133,44 +142,45 @@ def get_tv_power_state() -> str:
         for line in output.splitlines():
             if "pwr-state:" in line:
                 return line.split(":")[1].split("(")[0].strip()
-        return "offline"
     except Exception:
-        return "offline"
+        pass
+
+    if is_tv_network_awake(timeout=0.3):
+        return "on"
+
+    return "offline"
 
 
 def wake_tv():
     print("[*] Initiating TV Wake Sequence...")
     run_cmd("kscreen-doctor --dpms on")
-    
-    # Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE in parallel to select HDMI 1
-    run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
-    # Check if TV is already awake before sending toggle key!
+    # Check if TV is already awake before sending commands
     tv_state = get_tv_power_state()
     if tv_state in ("on", "to-on"):
-        print(f"[*] TV is already in '{tv_state}'. Skipping WebSocket KEY_POWER toggle to avoid inverting power state.")
+        print(f"[*] TV is already '{tv_state}'. Re-asserting HDMI active source and DPMS.")
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
         print("[*] TV Wake sequence completed.\n")
         get_status()
         return
 
-    print("[*] Broadcasting rapid Wake-on-LAN burst (3 packets) across all NICs...")
-    send_wol(TV_MAC, bursts=3, delay_between=0.05)
+    print("[*] Broadcasting rapid Wake-on-LAN burst (5 packets) across all NICs...")
+    send_wol(TV_MAC, bursts=5, delay_between=0.05)
 
-    from tv_power_daemon import send_tv_websocket_key
-    
-    if send_tv_websocket_key("KEY_POWER"):
-        print("[*] TV woken via WebSocket KEY_POWER (fast path).")
-        print("[*] TV Wake sequence completed.\n")
-        get_status()
-        return
+    # Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE (phys-addr=1.0.0.0)
+    # Note: We do NOT send WebSocket KEY_POWER in the wake sequence to prevent accidental power inversion.
+    run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
 
     for attempt in range(1, 11):
-        print(f"[*] Wake attempt {attempt}/10: Waiting for TV to wake via WoL...")
+        print(f"[*] Wake attempt {attempt}/10: Waiting for TV to wake via WoL/CEC...")
         time.sleep(1.5)
-        if get_tv_power_state() in ("on", "to-on"):
-            print(f"[*] TV confirmed awake via CEC on attempt {attempt}.")
+        current_state = get_tv_power_state()
+        if current_state in ("on", "to-on"):
+            print(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}.")
+            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
             break
-        send_wol(TV_MAC, bursts=3, delay_between=0.05)
+        send_wol(TV_MAC, bursts=4, delay_between=0.05)
+        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on --active-source phys-addr=1.0.0.0")
     else:
         print("[!] TV failed to wake after 10 WoL attempts.")
 
@@ -188,8 +198,9 @@ def standby_tv():
     if tv_state in ("standby", "to-standby"):
         print(f"[*] TV is already in {tv_state}. Skipping WebSocket power toggle.")
     else:
+        run_cmd("cec-ctl -d /dev/cec0 --playback --to 0 --standby")
         send_tv_websocket_key("KEY_POWER")
-    
+
     print("[*] Waiting 4 seconds for TV network stack to spin down...")
     time.sleep(4)
     print("[*] TV Standby commands completed.\n")
