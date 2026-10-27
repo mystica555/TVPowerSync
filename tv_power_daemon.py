@@ -21,6 +21,10 @@ import sys
 import os
 # Add venv to sys.path so we can import samsungtvws without breaking system dbus
 sys.path.append("/home/mike/src/drmstuff/venv/lib/python3.14/site-packages")
+
+# Ensure Wayland environment variables are set so kscreen-doctor works from systemd user service
+os.environ.setdefault("WAYLAND_DISPLAY", "wayland-0")
+os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
 import glob
 import signal
 import socket
@@ -137,7 +141,7 @@ def run_cmd_async(cmd: str, desc: str = ""):
     return t
 
 
-def is_tv_network_awake(timeout=0.4) -> bool:
+def is_tv_network_awake(timeout=0.6) -> bool:
     """Check if TV network port 8001 is open (listening)."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -146,38 +150,27 @@ def is_tv_network_awake(timeout=0.4) -> bool:
     except Exception:
         return False
 
-def send_tv_sleep_wifi(reason: str):
-    """Put TV to sleep via Wi-Fi/WebSocket (e.g. when undocked or lid closed)."""
-    def _worker():
-        log(f"[*] Sending Wi-Fi sleep command to TV ({reason})...")
-        tv_state = get_tv_power_state()
-        if tv_state in ("standby", "to-standby"):
-            log(f"[*] TV is already in {tv_state}. Skipping Wi-Fi sleep.")
-            return
-        if is_tv_network_awake(timeout=0.4):
-            send_tv_websocket_key("KEY_POWER")
-    threading.Thread(target=_worker, daemon=True).start()
-
-def get_tv_power_state() -> str:
+def get_tv_power_state(use_cec: bool = True) -> str:
     """Uses cec-ctl to get the current power state of the TV, falling back to network reachability.
     Returns 'on', 'standby', 'to-on', 'to-standby', or 'offline'.
     """
-    try:
-        output = subprocess.check_output(
-            ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
-            stderr=subprocess.STDOUT, timeout=1.0
-        ).decode()
-        for line in output.splitlines():
-            if "pwr-state:" in line:
-                return line.split(":")[1].split("(")[0].strip()
-    except Exception:
-        pass
+    if use_cec:
+        try:
+            output = subprocess.check_output(
+                ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
+                stderr=subprocess.STDOUT, timeout=1.0
+            ).decode()
+            for line in output.splitlines():
+                if "pwr-state:" in line:
+                    return line.split(":")[1].split("(")[0].strip()
+        except Exception:
+            pass
 
     # If CEC did not return a decisive state (bus collision, packet drop, or undocked),
     # check if the TV network interface (port 8001) is active.
-    # When the TV is ON, port 8001 responds immediately (< 1ms).
+    # When the TV is ON, port 8001 responds immediately (< 1ms on LAN, < 50ms on Wi-Fi).
     # When the TV is in standby, port 8001 is closed / unreachable.
-    if is_tv_network_awake(timeout=0.3):
+    if is_tv_network_awake(timeout=0.6):
         return "on"
 
     return "offline"
@@ -193,8 +186,12 @@ class TVPowerSyncDaemon:
         self.last_dp_status = self.read_external_display_status()
         self.last_lid_state = self.read_lid_state()
         self.wake_in_progress = False
+        self.abort_wake = False
         self.wake_backoff_until = 0.0
         self.poll_counter = 0
+        self.offline_streak = 0
+        self.tv_commanded_off = False
+        self.last_off_time = 0.0
 
         # Initial state
         initial_hw = self.read_hardware_dpms()
@@ -256,6 +253,51 @@ class TVPowerSyncDaemon:
                 pass
         return "open"
 
+    def send_tv_sleep_wifi(self, reason: str, is_undock: bool = False):
+        """Put TV to sleep via Wi-Fi/WebSocket (e.g. when undocked or lid closed).
+        Includes automatic retry across network interface failover (dock Ethernet -> Wi-Fi).
+        """
+        self.abort_wake = True
+
+        def _worker():
+            log(f"[*] Sending Wi-Fi sleep command to TV ({reason})...")
+            elapsed_since_off = time.time() - self.last_off_time
+            if self.tv_commanded_off and elapsed_since_off < 12.0:
+                log(f"[*] TV was already commanded off {elapsed_since_off:.1f}s ago. Skipping duplicate KEY_POWER toggle.")
+                return
+
+            # Only query CEC if external display is still physically connected
+            if not is_undock and self.read_external_display_status() == "connected":
+                tv_state = get_tv_power_state(use_cec=True)
+                if tv_state in ("standby", "to-standby"):
+                    log(f"[*] TV is already in {tv_state}. Skipping Wi-Fi sleep.")
+                    self.tv_commanded_off = True
+                    self.last_off_time = time.time()
+                    return
+
+            # When undocking, USB Ethernet in the dock disconnects at the exact same moment,
+            # causing NetworkManager to fail over routing to Wi-Fi (~0.2s - 1.5s transition).
+            # Retry up to 10 times over ~5s until the packet is delivered over Wi-Fi.
+            max_attempts = 10 if is_undock else 4
+            for attempt in range(1, max_attempts + 1):
+                # Abort sleep if the dock was plugged back in while retrying
+                if is_undock and self.read_external_display_status() == "connected":
+                    log("[*] Dock reconnected during Wi-Fi sleep retry; aborting sleep.")
+                    return
+
+                if is_tv_network_awake(timeout=0.6):
+                    if send_tv_websocket_key("KEY_POWER"):
+                        self.tv_commanded_off = True
+                        self.last_off_time = time.time()
+                        log(f"[*] TV sleep command delivered over Wi-Fi on attempt {attempt}/{max_attempts} ({reason}).")
+                        return
+                if attempt < max_attempts:
+                    time.sleep(0.5)
+
+            log(f"[*] Could not reach TV over Wi-Fi after {max_attempts} attempts ({reason}) - TV may already be off.")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
     def trigger_decisive_wake(self, reason: str):
         """Spawns non-blocking worker thread to decisively wake the TV."""
         if self.wake_in_progress:
@@ -265,6 +307,7 @@ class TVPowerSyncDaemon:
             log(f"[*] Wake backed off for another {int(self.wake_backoff_until - time.time())}s ({reason}).")
             return
 
+        self.abort_wake = False
         self.wake_in_progress = True
         threading.Thread(target=self._decisive_wake_worker, args=(reason,), daemon=True).start()
 
@@ -277,16 +320,25 @@ class TVPowerSyncDaemon:
             self.wake_in_progress = False
 
     def _do_decisive_wake(self, reason: str):
+        if self.abort_wake or self.read_external_display_status() != "connected":
+            log(f"[*] Aborting wake ({reason}) because external display is not connected.")
+            return
+
         log(f"--> [DECISIVE WAKE] ({reason})")
         self.state = "awake"
+        self.tv_commanded_off = False
+        self.offline_streak = 0
 
         # 1. Respect shutdown settling buffer if recently put to sleep
-        if hasattr(self, "last_off_time"):
-            elapsed = time.time() - self.last_off_time
-            if elapsed < 3.0:
-                wait_time = 3.0 - elapsed
-                log(f"[*] Wake requested {elapsed:.2f}s after sleep. Waiting {wait_time:.2f}s for TV shutdown cycle...")
-                time.sleep(wait_time)
+        elapsed = time.time() - self.last_off_time
+        if elapsed < 3.0:
+            wait_time = 3.0 - elapsed
+            log(f"[*] Wake requested {elapsed:.2f}s after sleep. Waiting {wait_time:.2f}s for TV shutdown cycle...")
+            time.sleep(wait_time)
+
+        if self.abort_wake or self.read_external_display_status() != "connected":
+            log("[*] Aborting wake after settle wait because external display disconnected.")
+            return
 
         # 2. Turn on KDE DPMS
         run_cmd_async("kscreen-doctor --dpms on")
@@ -311,8 +363,14 @@ class TVPowerSyncDaemon:
 
         # 6. Verification and retry loop for deep standby (waiting for WoL / hardware boot)
         for attempt in range(1, 11):
+            if self.abort_wake or self.read_external_display_status() != "connected":
+                log("[*] External display disconnected during wake loop; aborting wake.")
+                return
             log(f"Wake attempt {attempt}/10: Waiting for TV to wake via WoL/CEC...")
             time.sleep(1.5)
+            if self.abort_wake or self.read_external_display_status() != "connected":
+                log("[*] External display disconnected during wake loop; aborting wake.")
+                return
             current_state = get_tv_power_state()
             if current_state in ("on", "to-on"):
                 log(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. Syncing video stream and active source...")
@@ -331,26 +389,36 @@ class TVPowerSyncDaemon:
             return
         log(f"--> [OFF DETECTED] ({reason})")
         self.state = "asleep"
+        self.abort_wake = True
 
         # If displays are turning off due to idle DPMS, automatically lock session
         if "DPMS" in reason:
             log("[*] Locking session for idle DPMS display turn-off (autolock).")
             run_cmd_async("loginctl lock-session")
 
+        elapsed_since_off = time.time() - self.last_off_time
+        if self.tv_commanded_off and elapsed_since_off < 12.0:
+            log(f"[*] TV was already commanded off {elapsed_since_off:.1f}s ago. Skipping power toggle.")
+            return
+
+        is_connected = (self.read_external_display_status() == "connected")
+
         # Check if TV is already in standby before sending toggle key.
-        tv_state = get_tv_power_state()
+        tv_state = get_tv_power_state(use_cec=is_connected)
         if tv_state in ("standby", "to-standby"):
             log(f"[*] TV is already in {tv_state}. Skipping power toggle.")
+            self.tv_commanded_off = True
             self.last_off_time = time.time()
             return
 
         # If external display is connected, send CEC standby command
-        if self.read_external_display_status() == "connected":
+        if is_connected:
             run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --standby")
 
         # Send WebSocket sleep over Wi-Fi
-        if is_tv_network_awake(timeout=0.3):
-            send_tv_websocket_key("KEY_POWER")
+        if is_tv_network_awake(timeout=0.6):
+            if send_tv_websocket_key("KEY_POWER"):
+                self.tv_commanded_off = True
         self.last_off_time = time.time()
 
     def handle_screen_on(self, reason: str):
@@ -388,13 +456,14 @@ class TVPowerSyncDaemon:
             old_dp = self.last_dp_status
             self.last_dp_status = current_dp
             self.wake_backoff_until = 0.0  # Clear backoff on hardware change
+            self.offline_streak = 0
 
             if current_dp == "connected":
                 log("[*] External TV plugged in (dock connected). Decisively waking TV...")
                 self.trigger_decisive_wake("Dock connected")
             elif current_dp == "disconnected" and old_dp == "connected":
                 log("[*] External TV unplugged (undocked). Sending sleep command to TV via Wi-Fi...")
-                send_tv_sleep_wifi("Dock disconnected")
+                self.send_tv_sleep_wifi("Dock disconnected", is_undock=True)
 
         # 3. Laptop lid state
         current_lid = self.read_lid_state()
@@ -405,7 +474,7 @@ class TVPowerSyncDaemon:
                 log("[*] Laptop lid closed. Putting TV to sleep...")
                 if current_dp == "connected":
                     run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --standby")
-                send_tv_sleep_wifi("Lid closed")
+                self.send_tv_sleep_wifi("Lid closed", is_undock=(current_dp != "connected"))
                 self.state = "asleep"
             elif current_lid == "open":
                 log("[*] Laptop lid opened. Ensuring displays are awake...")
@@ -424,9 +493,21 @@ class TVPowerSyncDaemon:
                 not self.wake_in_progress and
                 time.time() >= self.wake_backoff_until):
                 tv_state = get_tv_power_state()
-                if tv_state in ("standby", "to-standby", "offline"):
+                # Re-verify dock is still connected after the query (guards against undock race)
+                if self.read_external_display_status() != "connected":
+                    self.offline_streak = 0
+                elif tv_state in ("standby", "to-standby"):
                     log(f"[!] Watchdog check: Logged in and dock connected, but TV is in '{tv_state}'. Decisively waking TV...")
+                    self.offline_streak = 0
                     self.trigger_decisive_wake("Watchdog - TV asleep while dock connected and logged in")
+                elif tv_state == "offline":
+                    self.offline_streak += 1
+                    if self.offline_streak >= 2:
+                        log(f"[!] Watchdog check: Logged in and dock connected, but TV is 'offline' ({self.offline_streak} consecutive checks). Decisively waking TV...")
+                        self.offline_streak = 0
+                        self.trigger_decisive_wake("Watchdog - TV offline while dock connected and logged in")
+                else:
+                    self.offline_streak = 0
 
         return True  # Keep GLib timer active
 

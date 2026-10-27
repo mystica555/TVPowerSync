@@ -4,6 +4,8 @@ After=plasma-workspace.target
 
 [Service]
 Type=simple
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=QT_QPA_PLATFORM=wayland
 ExecStart=%h/.local/bin/tv_power_daemon.py
 Restart=always
 RestartSec=5
