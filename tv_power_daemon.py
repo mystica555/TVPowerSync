@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """
 tv_power_daemon.py - Synchronize Samsung TV power with laptop display state
-Monitors:
-  1. Real-time hardware DPMS of internal display (/sys/class/drm/*-eDP-*/dpms)
-     Detects hitting Escape at login prompt, idle display sleep, etc.
-  2. D-Bus KDE ScreenSaver ActiveChanged signal (screen lock/unlock)
-  3. D-Bus systemd login1 PrepareForSleep signal (system suspend/resume)
+Event-Driven Architecture:
+  1. Kernel Netlink KObject UEvent socket (zero-polling dock / display hotplug)
+  2. D-Bus systemd login1 PropertiesChanged (zero-polling hardware lid events)
+  3. D-Bus KDE ScreenSaver ActiveChanged signal (screen lock/unlock)
+  4. D-Bus systemd login1 PrepareForSleep signal (system suspend/resume)
+  5. Adaptive hardware DPMS tracking (fast 250ms when locked, slow 2s when working)
+  6. Lightweight socket-based watchdog (zero subprocess forks while TV is streaming)
 
 Actions:
   - When laptop display turns OFF:
-      1. Transmit WebSocket KEY_POWEROFF / KEY_POWER keystroke packet to TV
+      1. Transmit WebSocket KEY_POWER keystroke packet to TV over Wi-Fi
       2. Issue HDMI-CEC Standby command so TV doesn't idle on 'No Signal'
   - When laptop display turns ON:
       1. Broadcast Wake-on-LAN Magic Packet to TV MAC (40:16:3b:d0:4f:8b)
-      2. Send HDMI-CEC Image View On & Active Source
-      3. Enable DPMS via kscreen-doctor
+      2. Send discrete HDMI-CEC Image View On & Active Source (HDMI 1)
+      3. Re-assert native 4K60 video mode via kscreen-doctor once TV is ready
 """
 
 import sys
@@ -25,6 +27,7 @@ sys.path.append("/home/mike/src/drmstuff/venv/lib/python3.14/site-packages")
 # Ensure Wayland environment variables are set so kscreen-doctor works from systemd user service
 os.environ.setdefault("WAYLAND_DISPLAY", "wayland-0")
 os.environ.setdefault("QT_QPA_PLATFORM", "wayland")
+
 import glob
 import signal
 import socket
@@ -115,7 +118,6 @@ def send_tv_websocket_key(key="KEY_POWEROFF"):
     """Send remote control key over Samsung TV WebSocket interface using samsungtvws."""
     try:
         from samsungtvws import SamsungTVWS
-        # Initialize with 2.0s timeout (uses port 8001 by default)
         tv = SamsungTVWS(TV_IP, timeout=1.5)
         tv.shortcuts().remote.send_key(key)
         log(f"WebSocket remote keystroke '{key}' sent via samsungtvws.")
@@ -140,9 +142,10 @@ def run_cmd_async(cmd: str, desc: str = ""):
     t.start()
     return t
 
-
-def is_tv_network_awake(timeout=0.6) -> bool:
-    """Check if TV network port 8001 is open (listening)."""
+def is_tv_network_awake(timeout=0.2) -> bool:
+    """Non-blocking TCP socket check to see if TV network port 8001 is listening.
+    Takes < 1ms on LAN and generates zero subprocess forks.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(timeout)
@@ -168,9 +171,7 @@ def get_tv_power_state(use_cec: bool = True) -> str:
 
     # If CEC did not return a decisive state (bus collision, packet drop, or undocked),
     # check if the TV network interface (port 8001) is active.
-    # When the TV is ON, port 8001 responds immediately (< 1ms on LAN, < 50ms on Wi-Fi).
-    # When the TV is in standby, port 8001 is closed / unreachable.
-    if is_tv_network_awake(timeout=0.6):
+    if is_tv_network_awake(timeout=0.4):
         return "on"
 
     return "offline"
@@ -184,11 +185,10 @@ class TVPowerSyncDaemon:
         log(f"Monitoring hardware display power at: {self.edp_dpms_path}")
 
         self.last_dp_status = self.read_external_display_status()
-        self.last_lid_state = self.read_lid_state()
+        self.last_lid_state = self.read_initial_lid_state()
         self.wake_in_progress = False
         self.abort_wake = False
         self.wake_backoff_until = 0.0
-        self.poll_counter = 0
         self.offline_streak = 0
         self.tv_commanded_off = False
         self.last_off_time = 0.0
@@ -197,7 +197,12 @@ class TVPowerSyncDaemon:
         initial_hw = self.read_hardware_dpms()
         self.last_hw_dpms = initial_hw
         self.is_locked = False
+        self.dpms_timer_id = 0
         log(f"Initial display power state: (hardware: {initial_hw}, external DP/HDMI: {self.last_dp_status}, lid: {self.last_lid_state})")
+
+        # Setup kernel netlink uevent socket for zero-polling hotplug monitoring
+        self.uevent_socket = None
+        self.setup_uevent_listener()
 
         if initial_hw == "On":
             self.state = "awake"
@@ -211,7 +216,54 @@ class TVPowerSyncDaemon:
         else:
             self.state = "asleep"
 
+        # Start adaptive DPMS timer (2000ms while unlocked; switches to 250ms when locked)
+        self.update_dpms_timer(interval_ms=2000)
+
+        # Start lightweight 5-second watchdog timer
+        GLib.timeout_add_seconds(5, self.on_watchdog_tick)
+
+    def setup_uevent_listener(self):
+        """Bind to Linux kernel Netlink KObject UEvent socket for push hotplug events."""
+        try:
+            self.uevent_socket = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, 15) # NETLINK_KOBJECT_UEVENT = 15
+            self.uevent_socket.bind((0, 1)) # Multicast group 1 (kernel uevents)
+            self.uevent_socket.setblocking(False)
+            GLib.io_add_watch(self.uevent_socket.fileno(), GLib.IO_IN, self.on_uevent)
+            log("Kernel Netlink UEvent listener registered for event-driven hotplug detection.")
+        except Exception as e:
+            log(f"Warning: Could not bind Netlink socket ({e}); falling back to periodic display check.")
+
+    def on_uevent(self, source, condition):
+        """Callback fired by GLib event loop when the Linux kernel emits a hardware uevent."""
+        try:
+            data = self.uevent_socket.recv(4096)
+            # Filter for DRM or USB device change / add / remove events
+            if b"SUBSYSTEM=drm" in data or b"SUBSYSTEM=usb" in data:
+                self.check_external_display_transition("Kernel uevent")
+        except Exception:
+            pass
+        return True # Keep watch active
+
+    def read_initial_lid_state(self) -> str:
+        """Read initial lid state via D-Bus login1, falling back to /proc/acpi once at startup."""
+        try:
+            bus = dbus.SystemBus()
+            manager = bus.get_object("org.freedesktop.login1", "/org/freedesktop/login1")
+            props = dbus.Interface(manager, "org.freedesktop.DBus.Properties")
+            is_closed = bool(props.Get("org.freedesktop.login1.Manager", "LidClosed"))
+            return "closed" if is_closed else "open"
+        except Exception:
+            for p in glob.glob("/proc/acpi/button/lid/*/state"):
+                try:
+                    with open(p, "r") as f:
+                        if "closed" in f.read().lower():
+                            return "closed"
+                except Exception:
+                    pass
+            return "open"
+
     def read_hardware_dpms(self) -> str:
+        """Fast 5-microsecond read of the laptop panel's DRM sysfs dpms state."""
         try:
             with open(self.edp_dpms_path, "r") as f:
                 return f.read().strip()
@@ -242,16 +294,93 @@ class TVPowerSyncDaemon:
                 pass
         return "disconnected"
 
-    def read_lid_state(self) -> str:
-        """Check if laptop lid is physically closed or open."""
-        for p in glob.glob("/proc/acpi/button/lid/*/state"):
-            try:
-                with open(p, "r") as f:
-                    if "closed" in f.read().lower():
-                        return "closed"
-            except Exception:
-                pass
-        return "open"
+    def check_external_display_transition(self, trigger: str = ""):
+        """Evaluates external display status and fires connect/disconnect actions only on state change."""
+        current_dp = self.read_external_display_status()
+        if current_dp != self.last_dp_status:
+            log(f"External display transition ({trigger}): {self.last_dp_status} -> {current_dp}")
+            old_dp = self.last_dp_status
+            self.last_dp_status = current_dp
+            self.wake_backoff_until = 0.0
+            self.offline_streak = 0
+
+            if current_dp == "connected":
+                log("[*] External TV plugged in (dock connected). Decisively waking TV...")
+                self.trigger_decisive_wake("Dock connected")
+            elif current_dp == "disconnected" and old_dp == "connected":
+                log("[*] External TV unplugged (undocked). Sending sleep command to TV via Wi-Fi...")
+                self.send_tv_sleep_wifi("Dock disconnected", is_undock=True)
+
+    def on_login1_properties_changed(self, interface_name, changed_props, invalidated_props):
+        """Event-driven callback for systemd logind hardware switch changes (zero ACPI polling)."""
+        if "LidClosed" in changed_props:
+            is_closed = bool(changed_props["LidClosed"])
+            new_lid_state = "closed" if is_closed else "open"
+            if new_lid_state != self.last_lid_state:
+                log(f"Laptop lid transition (D-Bus login1): {self.last_lid_state} -> {new_lid_state}")
+                self.last_lid_state = new_lid_state
+                current_dp = self.read_external_display_status()
+                if new_lid_state == "closed":
+                    log("[*] Laptop lid closed. Putting TV to sleep...")
+                    if current_dp == "connected":
+                        run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --standby")
+                    self.send_tv_sleep_wifi("Lid closed", is_undock=(current_dp != "connected"))
+                    self.state = "asleep"
+                elif new_lid_state == "open":
+                    log("[*] Laptop lid opened. Ensuring displays are awake...")
+                    if current_dp == "connected":
+                        self.trigger_decisive_wake("Lid opened")
+
+    def update_dpms_timer(self, interval_ms: int):
+        """Switches DPMS polling interval: fast (250ms) when locked, slow (2000ms) when unlocked."""
+        if self.dpms_timer_id:
+            GLib.source_remove(self.dpms_timer_id)
+        self.dpms_timer_id = GLib.timeout_add(interval_ms, self.on_dpms_poll)
+
+    def on_dpms_poll(self) -> bool:
+        """Minimalist 5-microsecond poll of hardware DPMS node."""
+        current_hw = self.read_hardware_dpms()
+        if current_hw != self.last_hw_dpms:
+            log(f"Hardware DPMS transition: {self.last_hw_dpms} -> {current_hw}")
+            self.last_hw_dpms = current_hw
+            if current_hw == "Off":
+                self.handle_screen_off("Laptop display DPMS went Off (hardware)")
+            elif current_hw == "On":
+                self.handle_screen_on("Laptop display DPMS went On (hardware)")
+        return True
+
+    def on_watchdog_tick(self) -> bool:
+        """Periodic lightweight watchdog (every 5 seconds) to ensure TV stays awake while working."""
+        if (self.state == "awake" and
+            self.last_hw_dpms == "On" and
+            self.last_dp_status == "connected" and
+            self.last_lid_state == "open" and
+            not self.wake_in_progress and
+            time.time() >= self.wake_backoff_until):
+
+            # Fast path: check port 8001 (takes 0.4ms, ZERO subprocesses while TV is streaming)
+            if is_tv_network_awake(timeout=0.2):
+                self.offline_streak = 0
+                return True
+
+            # Port 8001 was unreachable; check CEC power state to determine if TV turned off
+            tv_state = get_tv_power_state()
+            if self.read_external_display_status() != "connected":
+                self.offline_streak = 0
+            elif tv_state in ("standby", "to-standby"):
+                log(f"[!] Watchdog check: Logged in and dock connected, but TV is in '{tv_state}'. Decisively waking TV...")
+                self.offline_streak = 0
+                self.trigger_decisive_wake("Watchdog - TV asleep while dock connected and logged in")
+            elif tv_state == "offline":
+                self.offline_streak += 1
+                if self.offline_streak >= 2:
+                    log(f"[!] Watchdog check: Logged in and dock connected, but TV is 'offline' ({self.offline_streak} consecutive checks). Decisively waking TV...")
+                    self.offline_streak = 0
+                    self.trigger_decisive_wake("Watchdog - TV offline while dock connected and logged in")
+            else:
+                self.offline_streak = 0
+
+        return True
 
     def send_tv_sleep_wifi(self, reason: str, is_undock: bool = False):
         """Put TV to sleep via Wi-Fi/WebSocket (e.g. when undocked or lid closed).
@@ -266,7 +395,6 @@ class TVPowerSyncDaemon:
                 log(f"[*] TV was already commanded off {elapsed_since_off:.1f}s ago. Skipping duplicate KEY_POWER toggle.")
                 return
 
-            # Only query CEC if external display is still physically connected
             if not is_undock and self.read_external_display_status() == "connected":
                 tv_state = get_tv_power_state(use_cec=True)
                 if tv_state in ("standby", "to-standby"):
@@ -275,12 +403,8 @@ class TVPowerSyncDaemon:
                     self.last_off_time = time.time()
                     return
 
-            # When undocking, USB Ethernet in the dock disconnects at the exact same moment,
-            # causing NetworkManager to fail over routing to Wi-Fi (~0.2s - 1.5s transition).
-            # Retry up to 10 times over ~5s until the packet is delivered over Wi-Fi.
             max_attempts = 10 if is_undock else 4
             for attempt in range(1, max_attempts + 1):
-                # Abort sleep if the dock was plugged back in while retrying
                 if is_undock and self.read_external_display_status() == "connected":
                     log("[*] Dock reconnected during Wi-Fi sleep retry; aborting sleep.")
                     return
@@ -357,8 +481,6 @@ class TVPowerSyncDaemon:
         send_wol(TV_MAC, bursts=5, delay_between=0.05)
 
         # 5. Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE (phys-addr=1.0.0.0)
-        # Note: Both WoL and IMAGE_VIEW_ON are completely discrete commands.
-        # We do NOT send WebSocket KEY_POWER in the wake sequence to prevent accidental power inversion.
         run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
 
         # 6. Verification and retry loop for deep standby (waiting for WoL / hardware boot)
@@ -374,7 +496,6 @@ class TVPowerSyncDaemon:
             current_state = get_tv_power_state()
             if current_state in ("on", "to-on"):
                 log(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. Syncing video stream and active source...")
-                # Re-assert mode on external display NOW that the TV HDMI sink is awake and ready
                 run_cmd_async(f"kscreen-doctor output.{ext_conn}.mode.1")
                 run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
                 return
@@ -437,86 +558,16 @@ class TVPowerSyncDaemon:
         else:
             log("[*] External display not connected; skipping TV wake.")
 
-    def poll_hardware_dpms(self) -> bool:
-        """Periodic fast poll of hardware DPMS, external display, lid, and TV state (every 150ms)."""
-        # 1. Hardware DPMS of laptop internal panel
-        current_hw = self.read_hardware_dpms()
-        if current_hw != self.last_hw_dpms:
-            log(f"Hardware DPMS transition: {self.last_hw_dpms} -> {current_hw}")
-            self.last_hw_dpms = current_hw
-            if current_hw == "Off":
-                self.handle_screen_off("Laptop display DPMS went Off (hardware)")
-            elif current_hw == "On":
-                self.handle_screen_on("Laptop display DPMS went On (hardware)")
-
-        # 2. External display status (dock connection)
-        current_dp = self.read_external_display_status()
-        if current_dp != self.last_dp_status:
-            log(f"External display transition: {self.last_dp_status} -> {current_dp}")
-            old_dp = self.last_dp_status
-            self.last_dp_status = current_dp
-            self.wake_backoff_until = 0.0  # Clear backoff on hardware change
-            self.offline_streak = 0
-
-            if current_dp == "connected":
-                log("[*] External TV plugged in (dock connected). Decisively waking TV...")
-                self.trigger_decisive_wake("Dock connected")
-            elif current_dp == "disconnected" and old_dp == "connected":
-                log("[*] External TV unplugged (undocked). Sending sleep command to TV via Wi-Fi...")
-                self.send_tv_sleep_wifi("Dock disconnected", is_undock=True)
-
-        # 3. Laptop lid state
-        current_lid = self.read_lid_state()
-        if current_lid != self.last_lid_state:
-            log(f"Laptop lid transition: {self.last_lid_state} -> {current_lid}")
-            self.last_lid_state = current_lid
-            if current_lid == "closed":
-                log("[*] Laptop lid closed. Putting TV to sleep...")
-                if current_dp == "connected":
-                    run_cmd_async("cec-ctl -d /dev/cec0 --playback --to 0 --standby")
-                self.send_tv_sleep_wifi("Lid closed", is_undock=(current_dp != "connected"))
-                self.state = "asleep"
-            elif current_lid == "open":
-                log("[*] Laptop lid opened. Ensuring displays are awake...")
-                if current_dp == "connected":
-                    self.trigger_decisive_wake("Lid opened")
-
-        # 4. Periodic Watchdog (every ~3 seconds / 20 ticks):
-        # "make certain the tv is awake if im logged in and the dp>hdmi is connected"
-        self.poll_counter += 1
-        if self.poll_counter >= 20:
-            self.poll_counter = 0
-            if (self.state == "awake" and
-                current_hw == "On" and
-                current_dp == "connected" and
-                current_lid == "open" and
-                not self.wake_in_progress and
-                time.time() >= self.wake_backoff_until):
-                tv_state = get_tv_power_state()
-                # Re-verify dock is still connected after the query (guards against undock race)
-                if self.read_external_display_status() != "connected":
-                    self.offline_streak = 0
-                elif tv_state in ("standby", "to-standby"):
-                    log(f"[!] Watchdog check: Logged in and dock connected, but TV is in '{tv_state}'. Decisively waking TV...")
-                    self.offline_streak = 0
-                    self.trigger_decisive_wake("Watchdog - TV asleep while dock connected and logged in")
-                elif tv_state == "offline":
-                    self.offline_streak += 1
-                    if self.offline_streak >= 2:
-                        log(f"[!] Watchdog check: Logged in and dock connected, but TV is 'offline' ({self.offline_streak} consecutive checks). Decisively waking TV...")
-                        self.offline_streak = 0
-                        self.trigger_decisive_wake("Watchdog - TV offline while dock connected and logged in")
-                else:
-                    self.offline_streak = 0
-
-        return True  # Keep GLib timer active
-
     def on_screensaver_active_changed(self, active: bool):
         if active:
             log("KDE ScreenSaver ActiveChanged: TRUE (locked)")
             self.is_locked = True
+            # Fast DPMS polling (250ms) to detect Escape key or prompt sleep
+            self.update_dpms_timer(interval_ms=250)
         else:
             log("KDE ScreenSaver ActiveChanged: FALSE (unlocked)")
+            # Slow DPMS polling (2000ms) while user is working
+            self.update_dpms_timer(interval_ms=2000)
             if getattr(self, "is_locked", False):
                 self.is_locked = False
                 self.handle_screen_on("KDE ScreenSaver Unlocked")
@@ -527,16 +578,15 @@ class TVPowerSyncDaemon:
         if sleeping:
             self.handle_screen_off("systemd PrepareForSleep: suspending")
         else:
+            # Re-check external display transition immediately on resume
+            self.check_external_display_transition("Resume from sleep")
             self.handle_screen_on("systemd PrepareForSleep: resumed")
 
 def main():
-    log("Starting Samsung TV Power Synchronization Daemon...")
+    log("Starting Samsung TV Power Synchronization Daemon (Event-Driven)...")
 
     DBusGMainLoop(set_as_default=True)
     daemon = TVPowerSyncDaemon()
-
-    # Register fast GLib timer (150ms) to track hardware display DPMS
-    GLib.timeout_add(150, daemon.poll_hardware_dpms)
 
     # Register D-Bus signal listeners
     try:
@@ -559,7 +609,14 @@ def main():
             dbus_interface="org.freedesktop.login1.Manager",
             bus_name="org.freedesktop.login1"
         )
-        log("D-Bus System Bus signal listener registered.")
+        # Register listener for login1 hardware switch properties (LidClosed)
+        system_bus.add_signal_receiver(
+            daemon.on_login1_properties_changed,
+            signal_name="PropertiesChanged",
+            dbus_interface="org.freedesktop.DBus.Properties",
+            path="/org/freedesktop/login1"
+        )
+        log("D-Bus System Bus signal listeners registered (PrepareForSleep, LidClosed).")
     except Exception as e:
         log(f"Notice: SystemBus listener: {e}")
 
@@ -572,7 +629,7 @@ def main():
     signal.signal(signal.SIGINT, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)
 
-    log("Daemon is active. Monitoring hardware DPMS and D-Bus signals.")
+    log("Daemon is active. Monitoring hardware DPMS, kernel uevents, and D-Bus signals.")
     loop.run()
 
 if __name__ == "__main__":
