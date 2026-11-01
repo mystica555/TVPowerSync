@@ -9,41 +9,63 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
 ## Full Feature Set
 
 1. **Real-Time Hardware DPMS Synchronization (`tv_power_daemon.py`)**:
-   - Adaptive DPMS tracking: polls internal panel DPMS fast (250ms) only when locked (detecting `Escape` or prompt blanking in milliseconds), and idles at 2000ms when unlocked to conserve CPU.
-   - **Screen Off**: When the laptop display turns off (e.g., idle timeout or pressing `Escape` on the lock screen), automatically locks the session (`loginctl lock-session`) and powers off the TV via HDMI-CEC Standby (`--standby`) and WebSocket (`KEY_POWER`).
-   - **Screen On**: When the laptop display wakes, decisively wakes the TV via multi-NIC Wake-on-LAN bursts and discrete HDMI-CEC (`IMAGE_VIEW_ON` + `ACTIVE_SOURCE`), then re-asserts native `3840x2160@60Hz` output via `kscreen-doctor` once the TV's HDMI receiver comes online.
+   - Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked.
+   - **Screen Off**: locks the session (`loginctl lock-session`) and then uses **one** power path — discrete HDMI-CEC `STANDBY` when docked, with WebSocket `KEY_POWER` only as a fallback if CEC fails. The two are never sent together, so a toggle can't undo the standby.
+   - **Screen On**: wakes the TV with multi-NIC Wake-on-LAN bursts and discrete HDMI-CEC (`IMAGE_VIEW_ON` + `ACTIVE_SOURCE`), then re-asserts the native mode via `kscreen-doctor output.<connector>.mode.<TV_MODE>` once the TV confirms it is awake.
+   - **Non-blocking event loop**: every CEC/WoL/WebSocket/kscreen call runs in a worker thread. The GLib loop only reads sysfs and dispatches intents.
+   - **Startup reconciliation**: a daemon start while the panel is already off commands the TV off; a start while the panel is on and docked wakes the TV if it is in standby.
 
-2. **Instant Event-Driven Dock Hotplug & Undock Wi-Fi Sleep**:
-   - **Zero-Polling Hotplug**: Binds directly to the Linux kernel Netlink KObject UEvent socket. Display and USB changes push hardware notifications directly into the GLib event loop with zero timer polling.
-   - **Dock Plug-In (`disconnected -> connected`)**: Immediately wakes the TV from standby/deep standby, claims CEC Logical Address 4 (`Playback 1`), switches the TV directly to HDMI 1 (`phys-addr=1.0.0.0`), and syncs the 4K60 video stream.
-   - **Dock Unplug (`connected -> disconnected`)**: Because unplugging the USB-C dock severs HDMI-CEC *and* tears down the dock's wired USB Ethernet interface (`enx50a0300cc53a`), the daemon cancels any active wake worker, bypasses dead CEC queries, and retries sending WebSocket `KEY_POWER` over Wi-Fi (`wlo1`) across the NetworkManager route failover window so the TV immediately turns off instead of sitting on the "Input Disconnected" screen.
+2. **Event-Driven Dock Hotplug & Undock Wi-Fi Sleep**:
+   - **Kernel Netlink UEvents**: DRM hotplug and USB dock attach/detach are pushed into the GLib loop. Events are coalesced with a 400ms debounce because USB-C/PD renegotiation emits bursts.
+   - **Real fallback**: if the netlink bind fails, the daemon polls external display state every 2s instead of silently losing hotplug detection.
+   - **Dock Plug-In (`disconnected -> connected`)**: clears wake backoff and runs the decisive wake sequence.
+   - **Dock Unplug (`connected -> disconnected`)**: cancels any in-flight wake, skips the now-dead CEC adapter, and retries WebSocket `KEY_POWER` over Wi-Fi across the NetworkManager route failover window.
 
 3. **Event-Driven Laptop Lid Synchronization**:
-   - Listens on the System D-Bus for `PropertiesChanged` on `org.freedesktop.login1.Manager` (`LidClosed`).
-   - Zero ACPI polling: completely eliminates the expensive 1.89 ms kernel ACPI AML queries (`/proc/acpi/button/lid/*/state`) while responding instantly to lid open/close events.
-   - Closing the lid puts the TV to sleep via HDMI-CEC (if docked) and Wi-Fi WebSocket.
-   - Opening the lid while docked triggers the decisive wake sequence.
+   - Listens on the System D-Bus for `PropertiesChanged` on `org.freedesktop.login1.Manager` (`LidClosed`); zero ACPI polling.
+   - Closing the lid creates a sleep intent. Opening it clears backoff and wakes the TV if the dock is connected.
 
-4. **Zero-Fork Connection Watchdog & Power Inversion Protection**:
-   - Every 5 seconds, verifies that if you are logged in, the laptop screen is on, the lid is open, and the dock is connected, the TV is awake.
-   - **Zero Subprocess Forks While Streaming**: Probes the TV's open TCP port `8001` via non-blocking socket connect (< 0.4ms) rather than spawning `cec-ctl` processes every few seconds. Only falls back to querying `cec-ctl` if port 8001 is closed or unreachable.
-   - **Zero Power Inversion**: Wake sequences use *only* discrete commands (`WoL` + CEC `IMAGE_VIEW_ON` + `ACTIVE_SOURCE`) and never send toggle keys (`KEY_POWER`), while sleep sequences enforce a 12-second duplicate toggle cooldown (`tv_commanded_off`).
+4. **Intent Model, Serialized CEC & Exponential Backoff**:
+   - Every ON/OFF request is a monotonically numbered intent with its own cancellation event. A new intent cancels the previous one, and workers check cancellation before each side effect — a slow sleep retry can no longer deliver `KEY_POWER` after a wake has started.
+   - HDMI-CEC access is serialized: only one `cec-ctl` process can touch `/dev/cec0` at a time, and a cancelled intent's command is dropped inside that lock. Wake, standby and query are each a single `cec-ctl` invocation.
+   - The 5-second watchdog runs in a worker thread, probes TCP port `8001` (no forks while streaming), falls back to CEC when the port is closed, and requires two consecutive `offline` readings.
+   - Failed wakes back off exponentially (60s → 120s → ... → 15min) instead of retrying every ~75s forever. A dock connect, DPMS-on, lid-open or unlock resets the backoff.
+   - 12-second duplicate-off cooldown, shared by CEC and WebSocket paths.
 
 5. **Singleton Early-Boot Wake (`boot_wol.py` & `tv-boot-wol.service`)**:
-   - Pure systemd oneshot service (`RemainAfterExit=yes`) ordered after `network-online.target` and before `sddm.service`.
-   - Wakes the TV once per boot (without firing on subsequent DHCP renewals) if the dock/display or home network (`192.168.0.x`) is present and the laptop screen is on.
+   - systemd oneshot (`RemainAfterExit=yes`) ordered after `network-online.target` and before `sddm.service`.
+   - Wakes the TV once per boot if the dock/display or home network is present and the panel is not in DPMS Off.
 
-6. **Manual CLI Control (`control_tv.py`) & DRM Analyzer (`parse_drm_info.py`)**:
-   - `control_tv`: Command-line tool to inspect display/CEC/screensaver/network status or manually trigger wake, standby, or WoL.
-   - `parse_drm_info`: Summarizes Intel `i915` GPU capabilities, CRTC pipes, hardware planes, HDR metadata, and connector modes.
+6. **Manual CLI Control (`control_tv.py`) & DRM Analyzer (`parse_drm_info.py`)**
+   - `control_tv`: inspect display/CEC/screensaver/network status or manually trigger wake, standby, or WoL.
+   - `parse_drm_info`: summarize GPU capabilities, CRTC pipes, planes, HDR metadata, and connector modes.
+
+---
+
+## Configuration
+
+All scripts read the same environment variables (defaults match the original setup):
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `TV_IP` | `192.168.0.2` | TV address |
+| `TV_MAC` | `40:16:3b:d0:4f:8b` | Wake-on-LAN target |
+| `CEC_DEVICE` | `/dev/cec0` | HDMI-CEC adapter |
+| `TV_MODE` | `3840x2160@60` | Mode re-asserted via `kscreen-doctor` |
+| `TV_LOG_LEVEL` | `INFO` | Logging level (`DEBUG` is useful for CEC failures) |
+| `TV_PYTHON` | repo `venv/bin/python` | Interpreter substituted into the systemd unit by `deploy.sh` |
+| `TV_TOKEN_FILE` | `~/.local/state/drmstuff/tv_token.txt` | Pairing token path |
+
+Override persistent values in the systemd unit (for example
+`systemctl --user edit tv-power-sync.service`), not in the scripts.
 
 ---
 
 ## Directory Structure & XDG Compliance
 
 - **Source Repository**: `~/src/drmstuff/`
-- **Detailed Documentation**: [`~/src/drmstuff/ARCHITECTURE.md`](ARCHITECTURE.md)
-- **User Executables**: `~/.local/bin/` (`control_tv`, `tv_power_daemon`, `boot_wol`, `parse_drm_info`, `pair_samsung_tv`)
+- **Shared Helpers**: `tvlib.py` (config, logging, WoL, CEC, sysfs, backoff)
+- **User Executables**: `~/.local/bin/` (`control_tv`, `tv_power_daemon`, `boot_wol`, `parse_drm_info`, `pair_samsung_tv`, `tvlib.py`)
 - **Systemd User Service**: `~/.config/systemd/user/tv-power-sync.service`
 - **Systemd Boot Service**: `/etc/systemd/system/tv-boot-wol.service`
 - **HDMI-CEC Udev Rule**: `/etc/udev/rules.d/70-cec-uaccess.rules`
@@ -52,21 +74,44 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
 
 ## Deployment
 
-To install updated scripts into `~/.local/bin`, deploy systemd units and udev rules, and restart `tv-power-sync.service`:
+The daemon needs `dbus` and `gi` (system packages) plus `samsungtvws` (pip). The
+recommended layout is a venv that can still see the system bindings:
 
 ```bash
+python3 -m venv --system-site-packages venv
+./venv/bin/pip install samsungtvws
 ./deploy.sh
 ```
+
+`deploy.sh` installs `tvlib.py` alongside the scripts, selects an interpreter
+that can import `dbus` and `gi` (`TV_PYTHON` overrides it), substitutes it into
+`tv-power-sync.service`, rewrites the installed shebangs to it, and restarts the
+user service. If an existing venv cannot see `dbus`/`gi`, the script adds a
+version-matched `000-system-bindings.pth` to that venv (equivalent to
+`--system-site-packages`) instead of re-creating it. It fails with an explicit
+message if no interpreter can provide the system bindings, and warns if
+`samsungtvws` is missing (Wi-Fi control disabled).
 
 ---
 
 ## CLI Usage
 
 ```bash
-control_tv status    # Check KDE DPMS, HDMI-CEC power state, D-Bus lock state, and TV network port
-control_tv wake      # Decisively wake TV (5x WoL + CEC HDMI 1 active source + 4K60 mode sync)
-control_tv standby   # Put TV into standby (DPMS off + CEC standby + WebSocket KEY_POWER)
+control_tv status    # KDE DPMS, CEC power state, D-Bus lock state, TV port 8001
+control_tv wake      # Decisive wake (5x WoL + CEC HDMI 1 + mode sync)
+control_tv standby   # DPMS off + CEC standby (Wi-Fi toggle only if CEC fails)
 control_tv wol       # Broadcast multi-NIC Wake-on-LAN magic packets only
 
-parse_drm_info       # Parse and summarize DRM GPU pipes, planes, and connector capabilities
+parse_drm_info       # Summarize DRM GPU pipes, planes, and connector capabilities
 ```
+
+---
+
+## Caveats
+
+- The watchdog's TCP fallback assumes the TV closes port `8001` in standby. If a
+  firmware update keeps it open, CEC remains the authoritative state source (the
+  daemon queries CEC when the port is closed, and reports `on` otherwise).
+- A system suspend can begin before the asynchronous sleep worker finishes. The
+  daemon still issues the command as early as possible, but logind does not wait
+  for `PrepareForSleep` handlers.

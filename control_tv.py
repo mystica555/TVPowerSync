@@ -1,231 +1,179 @@
 #!/usr/bin/env python3
 """
-control_tv.py - Comprehensive power control for Samsung TV (2016 KU7000 / Tizen)
-Combines Wake-on-LAN (WoL), HDMI-CEC, and KDE KWin DPMS.
+control_tv.py - Manual power control and diagnostics for the Samsung TV.
 
 Usage:
-    ./control_tv.py status      # Check DPMS mode and CEC TV power state
-    ./control_tv.py wake        # Wake TV (WoL + CEC Image View On + DPMS On)
-    ./control_tv.py standby     # Turn off TV (CEC Standby + DPMS Off)
-    ./control_tv.py wol         # Send Wake-on-LAN magic packet only
+    ./control_tv.py status      # Check DPMS, CEC power state, lock state, reachability
+    ./control_tv.py wake        # Wake TV (WoL + CEC Image View On + DPMS/mode sync)
+    ./control_tv.py standby     # Put TV into standby (CEC first, Wi-Fi fallback)
+    ./control_tv.py wol         # Send Wake-on-LAN magic packets only
+
+Configuration is read from TV_IP / TV_MAC / CEC_DEVICE / TV_MODE (see tvlib.py).
 """
 
-import sys
-import os
-import time
-import socket
 import subprocess
+import sys
+import time
 
 try:
     import dbus
 except ImportError:
     dbus = None
 
-TV_IP = "192.168.0.2"
-TV_MAC = "40:16:3b:d0:4f:8b"
-CEC_DEVICE = "/dev/cec0"
+import tvlib
 
-def send_wol(mac=TV_MAC, bursts=3, delay_between=0.05):
-    """Broadcast Wake-on-LAN magic packets across all active network interfaces."""
-    mac_clean = mac.replace(":", "").replace("-", "")
-    if len(mac_clean) != 12:
-        print(f"Error: Invalid MAC address {mac}")
-        return False
-    mac_bytes = bytes.fromhex(mac_clean)
-    packet = b"\xff" * 6 + mac_bytes * 16
 
-    targets = {"255.255.255.255", "192.168.0.255", TV_IP}
-    local_ips = []
+def run(cmd: list[str], timeout: float = 15.0):
     try:
-        out = subprocess.run(["ip", "-o", "-4", "addr", "show"], capture_output=True, text=True).stdout
-        for line in out.splitlines():
-            parts = line.split()
-            if "inet" in parts:
-                ip_addr = parts[parts.index("inet") + 1].split("/")[0]
-                if ip_addr.startswith("192.168.") or ip_addr.startswith("10."):
-                    local_ips.append(ip_addr)
-            if "brd" in parts:
-                brd = parts[parts.index("brd") + 1]
-                if brd.startswith("192.168.") or brd.startswith("10.") or brd == "255.255.255.255":
-                    targets.add(brd)
-    except Exception:
-        pass
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"[!] {' '.join(cmd)} failed: {exc}")
+        return None
 
-    for burst_idx in range(bursts):
-        # 1. Global / subnet broadcasts
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            for target in targets:
-                for port in (9, 7):
-                    try:
-                        s.sendto(packet, (target, port))
-                    except Exception:
-                        pass
 
-        # 2. Bound to each local NIC (Ethernet and Wi-Fi)
-        for local_ip in local_ips:
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                    s.bind((local_ip, 0))
-                    for port in (9, 7):
-                        s.sendto(packet, ("255.255.255.255", port))
-                        s.sendto(packet, ("192.168.0.255", port))
-            except Exception:
-                pass
-
-        if burst_idx < bursts - 1:
-            time.sleep(delay_between)
-
-    print(f"[*] Wake-on-LAN Magic Packet sent across all NICs to {mac} ({bursts} burst{'s' if bursts > 1 else ''})")
-    return True
-
-def run_cmd(cmd, check=False):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True, check=check)
-
-def run_cmd_async(cmd: str):
-    import threading
-    threading.Thread(target=lambda: subprocess.run(cmd, shell=True, capture_output=True), daemon=True).start()
-
-def get_status():
+def show_status(config: tvlib.Config, cec: tvlib.CecController) -> None:
     print("=== Display Power Management (DPMS) ===")
-    p = run_cmd("kscreen-doctor --dpms show")
-    if p.stdout.strip():
-        print(p.stdout.strip())
+    result = run(["kscreen-doctor", "--dpms", "show"])
+    if result is not None and result.stdout.strip():
+        print(result.stdout.strip())
     else:
         print("DPMS query returned no output.")
 
     print("\n=== HDMI-CEC Power Status ===")
-    p = run_cmd(f"cec-ctl -d {CEC_DEVICE} --playback --to 0 --give-device-power-status")
-    for line in p.stdout.split("\n"):
-        if "pwr-state:" in line or "Received from TV" in line:
-            print(line.strip())
+    state = cec.power_state()
+    if state:
+        print(f"CEC pwr-state: {state}")
+    else:
+        print("CEC query returned no power state.")
 
     print("\n=== KDE Screensaver Status (via Python D-Bus) ===")
     if dbus is not None:
         try:
-            session_bus = dbus.SessionBus()
-            ss_obj = session_bus.get_object("org.freedesktop.ScreenSaver", "/org/freedesktop/ScreenSaver")
-            ss_iface = dbus.Interface(ss_obj, "org.freedesktop.ScreenSaver")
-            is_active = bool(ss_iface.GetActive())
-            state_str = "Active / Locked (Screen Sleeping)" if is_active else "Inactive / Unlocked (Screen Awake)"
-            print(f"Screensaver: {state_str} (GetActive = {is_active})")
-        except Exception as e:
-            print(f"Screensaver: Query error via D-Bus: {e}")
+            bus = dbus.SessionBus()
+            obj = bus.get_object(
+                "org.freedesktop.ScreenSaver", "/org/freedesktop/ScreenSaver"
+            )
+            iface = dbus.Interface(obj, "org.freedesktop.ScreenSaver")
+            is_active = bool(iface.GetActive())
+            label = "Active / Locked (Screen Sleeping)" if is_active else "Inactive / Unlocked"
+            print(f"Screensaver: {label} (GetActive = {is_active})")
+        except Exception as exc:
+            print(f"Screensaver: Query error via D-Bus: {exc}")
     else:
         print("Screensaver: python-dbus module not available.")
 
     print("\n=== Network Reachability ===")
-    # Quick probe to port 8001
-    p = run_cmd(f"nc -zv -w 1 {TV_IP} 8001 2>&1")
-    if "succeeded" in p.stdout:
-        print(f"TV network interface ({TV_IP}:8001) is AWAKE and responding.")
+    if tvlib.is_tv_network_awake(config.tv_ip, timeout=0.4):
+        print(f"TV network interface ({config.tv_ip}:8001) is AWAKE and responding.")
     else:
-        print(f"TV network interface ({TV_IP}:8001) is ASLEEP / unreachable.")
-
-def is_tv_network_awake(timeout=0.4) -> bool:
-    """Check if TV network port 8001 is open (listening)."""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(timeout)
-            return s.connect_ex((TV_IP, 8001)) == 0
-    except Exception:
-        return False
-
-def get_tv_power_state() -> str:
-    """Uses cec-ctl to get the current power state of the TV, falling back to network reachability."""
-    try:
-        output = subprocess.check_output(
-            ["cec-ctl", "-d", "/dev/cec0", "--playback", "--to", "0", "--give-device-power-status"],
-            stderr=subprocess.STDOUT, timeout=1.0
-        ).decode()
-        for line in output.splitlines():
-            if "pwr-state:" in line:
-                return line.split(":")[1].split("(")[0].strip()
-    except Exception:
-        pass
-
-    if is_tv_network_awake(timeout=0.3):
-        return "on"
-
-    return "offline"
+        print(f"TV network interface ({config.tv_ip}:8001) is ASLEEP / unreachable.")
 
 
-def wake_tv():
+def assert_mode(config: tvlib.Config) -> None:
+    connector = tvlib.external_connector_name()
+    if not connector:
+        print("[!] No active external connector found; skipping mode re-assert.")
+        return
+    result = run(["kscreen-doctor", f"output.{connector}.mode.{config.tv_mode}"])
+    if result is not None and result.returncode == 0:
+        print(f"[*] Re-asserted {connector} mode {config.tv_mode}.")
+    elif result is not None:
+        print(f"[!] kscreen-doctor mode re-assert exited {result.returncode}.")
+
+
+def wake_tv(config: tvlib.Config, cec: tvlib.CecController) -> None:
     print("[*] Initiating TV Wake Sequence...")
-    run_cmd("kscreen-doctor --dpms on")
+    if tvlib.read_panel_dpms() != "On":
+        run(["kscreen-doctor", "--dpms", "on"])
 
-    # Check if TV is already awake before sending commands
-    tv_state = get_tv_power_state()
+    tv_state = tvlib.get_tv_power_state(cec, config.tv_ip)
     if tv_state in ("on", "to-on"):
-        print(f"[*] TV is already '{tv_state}'. Re-asserting HDMI active source and DPMS...")
-        run_cmd_async("kscreen-doctor output.DP-2.mode.1")
-        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
-        print("[*] TV Wake sequence completed.\n")
-        get_status()
+        print(f"[*] TV is already '{tv_state}'. Re-asserting active source and mode...")
+        assert_mode(config)
+        cec.wake()
+        print("[*] TV wake sequence completed.\n")
+        show_status(config, cec)
         return
 
     print("[*] Broadcasting rapid Wake-on-LAN burst (5 packets) across all NICs...")
-    send_wol(TV_MAC, bursts=5, delay_between=0.05)
+    tvlib.send_wol(config.tv_mac, config.tv_ip, bursts=5, delay_between=0.05)
 
-    # Transmit HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE (phys-addr=1.0.0.0)
-    # Note: We do NOT send WebSocket KEY_POWER in the wake sequence to prevent accidental power inversion.
-    run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
+    # Discrete wake only: never send the KEY_POWER toggle here.
+    cec.wake()
 
     for attempt in range(1, 11):
-        print(f"[*] Wake attempt {attempt}/10: Waiting for TV to wake via WoL/CEC...")
+        print(f"[*] Wake attempt {attempt}/10: waiting for TV to wake via WoL/CEC...")
         time.sleep(1.5)
-        current_state = get_tv_power_state()
+        current_state = tvlib.get_tv_power_state(cec, config.tv_ip)
         if current_state in ("on", "to-on"):
-            print(f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. Syncing video stream...")
-            run_cmd_async("kscreen-doctor output.DP-2.mode.1")
-            run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
+            print(
+                f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. "
+                "Syncing video stream..."
+            )
+            assert_mode(config)
+            cec.wake()
             break
-        send_wol(TV_MAC, bursts=4, delay_between=0.05)
-        run_cmd_async("cec-ctl -d /dev/cec0 --playback && cec-ctl -d /dev/cec0 --from 4 --to 0 --image-view-on && cec-ctl -d /dev/cec0 --from 4 --active-source phys-addr=1.0.0.0")
+        tvlib.send_wol(config.tv_mac, config.tv_ip, bursts=4, delay_between=0.05)
+        cec.wake()
     else:
-        print("[!] TV failed to wake after 10 WoL attempts.")
+        print("[!] TV failed to wake after 10 attempts.")
 
-    print("[*] TV Wake sequence completed.\n")
-    get_status()
+    print("[*] TV wake sequence completed.\n")
+    show_status(config, cec)
 
-def standby_tv():
+
+def standby_tv(config: tvlib.Config, cec: tvlib.CecController) -> None:
     print("[*] Initiating TV Standby Sequence...")
-    from tv_power_daemon import send_tv_websocket_key
+    run(["kscreen-doctor", "--dpms", "off"])
 
-    # Turn off DPMS
-    run_cmd("kscreen-doctor --dpms off")
-
-    tv_state = get_tv_power_state()
-    if tv_state in ("standby", "to-standby"):
-        print(f"[*] TV is already in {tv_state}. Skipping WebSocket power toggle.")
+    state = tvlib.get_tv_power_state(cec, config.tv_ip)
+    if state in ("standby", "to-standby"):
+        print(f"[*] TV is already in {state}. Skipping power command.")
+    elif tvlib.external_display_connected() and cec.standby():
+        # One discrete command only; a WebSocket toggle afterwards could undo it.
+        print("[*] TV standby delivered via HDMI-CEC.")
+    elif tvlib.is_tv_network_awake(config.tv_ip, timeout=0.6) and tvlib.send_key(
+        config.tv_ip
+    ):
+        print("[*] TV standby delivered via Wi-Fi WebSocket.")
     else:
-        run_cmd("cec-ctl -d /dev/cec0 --playback --to 0 --standby")
-        send_tv_websocket_key("KEY_POWER")
+        print("[!] Could not deliver standby over CEC or Wi-Fi.")
 
-    print("[*] Waiting 4 seconds for TV network stack to spin down...")
+    print("[*] Waiting 4 seconds for the TV network stack to spin down...")
     time.sleep(4)
-    print("[*] TV Standby commands completed.\n")
-    get_status()
+    print("[*] TV standby commands completed.\n")
+    show_status(config, cec)
 
-def main():
+
+def main() -> int:
+    tvlib.setup_logging()
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__.strip())
-        sys.exit(0)
+        return 0
 
+    try:
+        config = tvlib.Config.from_env()
+    except ValueError as exc:
+        print(f"[!] Invalid configuration: {exc}")
+        return 2
+
+    cec = tvlib.CecController(config.cec_device)
     action = sys.argv[1].lower()
+
     if action == "status":
-        get_status()
+        show_status(config, cec)
     elif action in ("wake", "on"):
-        wake_tv()
+        wake_tv(config, cec)
     elif action in ("standby", "off", "sleep"):
-        standby_tv()
+        standby_tv(config, cec)
     elif action == "wol":
-        send_wol()
+        tvlib.send_wol(config.tv_mac, config.tv_ip)
     else:
         print(f"Unknown action: {action}")
         print(__doc__.strip())
-        sys.exit(1)
+        return 1
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -1,12 +1,14 @@
 [Unit]
-Description=Samsung TV Power Sync Daemon for KDE Screensaver & Suspend
+Description=Samsung TV Power Sync Daemon for KDE Screensaver, Lid & Suspend
 After=plasma-workspace.target
+PartOf=plasma-workspace.target
 
 [Service]
 Type=simple
-Environment=WAYLAND_DISPLAY=wayland-0
+# WAYLAND_DISPLAY is imported from the graphical session; do not hardcode it.
 Environment=QT_QPA_PLATFORM=wayland
-ExecStart=%h/.local/bin/tv_power_daemon.py
+# @PYTHON@ is substituted by deploy.sh with the venv interpreter.
+ExecStart=@PYTHON@ %h/.local/bin/tv_power_daemon.py
 Restart=always
 RestartSec=5
 StandardOutput=journal

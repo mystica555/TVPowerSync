@@ -3,25 +3,22 @@
 pair_samsung_tv.py - Initiate WebSocket pairing with Samsung Smart TV (2016 KU7000)
 
 Steps before running:
-1. Make sure the TV is powered ON and on the local network (192.168.0.2).
+1. Make sure the TV is powered ON and on the local network (TV_IP).
 2. On your TV, navigate to:
    Settings -> General -> External Device Manager -> Device Connection Manager
    - Access Notification: Set to 'First Time Only' or 'Always On'
    - Device List: Check and clear any old/denied entries if necessary
-3. Run this script. An on-screen prompt "Allow connection from Antigravity/Laptop?"
-   should appear on the TV.
+3. Run this script. An on-screen prompt "Allow connection from ...?" should
+   appear on the TV.
 4. Press 'Allow' using your TV remote.
 """
 
-import sys
-import os
-import ssl
-import json
 import base64
 import asyncio
-
-TV_IP = "192.168.0.2"
-TOKEN_FILE = os.path.expanduser("~/src/drmstuff/tv_token.txt")
+import json
+import os
+import ssl
+import sys
 
 try:
     import websockets
@@ -29,11 +26,22 @@ except ImportError:
     print("Error: websockets library not found in current environment.")
     sys.exit(1)
 
-async def attempt_pairing(port=8002):
-    use_ssl = (port == 8002)
+import tvlib
+
+TOKEN_FILE = os.environ.get(
+    "TV_TOKEN_FILE",
+    os.path.expanduser("~/.local/state/drmstuff/tv_token.txt"),
+)
+
+
+async def attempt_pairing(tv_ip: str, port: int = 8002) -> bool:
+    use_ssl = port == 8002
     name_b64 = base64.b64encode(b"Laptop-KDE").decode("utf-8")
     scheme = "wss" if use_ssl else "ws"
-    url = f"{scheme}://{TV_IP}:{port}/api/v2/channels/samsung.remote.control?name={name_b64}"
+    url = (
+        f"{scheme}://{tv_ip}:{port}/api/v2/channels/samsung.remote.control"
+        f"?name={name_b64}"
+    )
 
     ssl_ctx = None
     if use_ssl:
@@ -56,31 +64,41 @@ async def attempt_pairing(port=8002):
                         token = data.get("data", {}).get("token")
                         if token:
                             print(f"\n[+] SUCCESS! Received authentication token: {token}")
-                            with open(TOKEN_FILE, "w") as f:
-                                f.write(token)
+                            token_dir = os.path.dirname(TOKEN_FILE)
+                            if token_dir:
+                                os.makedirs(token_dir, exist_ok=True)
+                            with open(TOKEN_FILE, "w") as handle:
+                                handle.write(token)
                             print(f"[+] Token saved to {TOKEN_FILE}")
                             return True
                     elif data.get("event") == "ms.channel.unauthorized":
                         print("[-] Received ms.channel.unauthorized from TV.")
                         print("    If a prompt appeared on the TV, click 'Allow'.")
-                        print("    If no prompt appeared, check Device Connection Manager on the TV.")
+                        print("    If no prompt appeared, check Device Connection Manager.")
                 except asyncio.TimeoutError:
                     print("[-] Timed out waiting for message.")
                     break
-    except Exception as e:
-        print(f"[-] Connection error: {type(e).__name__}: {e}")
+    except Exception as exc:
+        print(f"[-] Connection error: {type(exc).__name__}: {exc}")
     return False
 
-def main():
+
+def main() -> int:
+    tvlib.setup_logging()
+    try:
+        config = tvlib.Config.from_env()
+    except ValueError as exc:
+        print(f"[!] Invalid configuration: {exc}")
+        return 2
+
     print(__doc__.strip())
     print("-" * 60)
-    # input
-    
-    # Try port 8002 first (standard for Tizen secure websocket)
-    success = asyncio.run(attempt_pairing(8002))
-    if not success:
-        print("\nRetrying on port 8001 (unencrypted websocket)...")
-        asyncio.run(attempt_pairing(8001))
+
+    if asyncio.run(attempt_pairing(config.tv_ip, 8002)):
+        return 0
+    print("\nRetrying on port 8001 (unencrypted websocket)...")
+    return 0 if asyncio.run(attempt_pairing(config.tv_ip, 8001)) else 1
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
