@@ -285,7 +285,7 @@ a:hover { color: var(--accent-ink); }
 }
 .page-readme .doc-body > ol > li {
   counter-increment: feature;
-  position: relative; margin: 0;
+  position: relative; margin: 0; min-width: 0;
   padding: 15px 18px 12px 54px;
   border: 1px solid var(--border); border-radius: 14px;
   background: linear-gradient(180deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 40%, transparent));
@@ -339,7 +339,7 @@ a:hover { color: var(--accent-ink); }
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   color: var(--accent-ink);
   font-family: var(--mono); font-size: .85em;
-  white-space: normal;
+  white-space: normal; overflow-wrap: anywhere;
 }
 .doc-body pre {
   margin: 1.25rem 0 1.4rem; padding: 16px 18px;
@@ -435,6 +435,9 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
   .next-card { max-width: none; }
   .foot-note { order: 2; }
 }
+@media (max-width: 380px) {
+  .brand-copy { display: none; }
+}
 @media print {
   :root {
     --bg: #fff; --surface: #fff; --surface-2: #fff; --surface-3: #fff;
@@ -464,7 +467,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="README.html">
+    <a class="brand" href="README.html" aria-label="TizenPowerSync documentation">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
       </span>
