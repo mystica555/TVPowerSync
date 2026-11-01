@@ -146,7 +146,8 @@ Grants the active desktop user access to `/dev/cec0` without root.
 
 Shared config, logging, WoL, CEC, WebSocket, DRM-sysfs and backoff helpers. The
 daemon, CLI and boot service all import it, so `send_wol`, power-state parsing
-and connector discovery exist in exactly one place.
+and connector discovery exist in exactly one place. `TvLink` holds the optional
+kept-warm remote-control WebSocket; `send_key` remains the one-shot fallback.
 
 ---
 
@@ -197,7 +198,16 @@ Triggered by DPMS off, lid close, dock unplug and suspend.
    fails, fall back to WebSocket `KEY_POWER`. The previous implementation sent
    both unconditionally, so the toggle could wake a TV the standby had just
    turned off.
-5. **Undock retry** — after the dock is removed, CEC is gone and NetworkManager
+5. **Warm control channel** — while docked and awake, the daemon holds one
+   WebSocket to the TV (`tvlib.TvLink`) and pings it every 10s. Tizen otherwise
+   stops answering on port 8001 after a few idle minutes, which made the undock
+   path spend 6-8s in TCP retries before `KEY_POWER` could go out. The sleep key
+   reuses this socket with `key_press_delay=0`, so only the server round trip
+   remains. The session is sourced from the Wi-Fi address, because a socket
+   bound to the dock's Ethernet address is destroyed at the moment of undock;
+   the sleep worker tries the warm link before any probe. The link is closed
+   while the TV is expected to be off, and reopened automatically after a wake.
+6. **Undock retry** — after the dock is removed, CEC is gone and NetworkManager
    is failing over from the dock NIC to Wi-Fi. The worker probes reachability
    with a 0.25s TCP timeout and retries every 0.25s for up to 20 attempts
    (~10s), aborting if the dock returns or the intent is cancelled. Wake-on-LAN

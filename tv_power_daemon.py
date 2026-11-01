@@ -48,6 +48,10 @@ SETTLE_SECONDS = 3.0
 # Tizen can keep reporting/streaming states for a long time after a standby
 # command. During this guard, never take the "already on" fast path.
 OFF_GUARD_SECONDS = 30.0
+# While docked, hold one WebSocket open so port 8001 never goes cold.
+# Tizen drops a remote-control session that stays quiet for ~30s, so ping
+# well inside that window. A control frame every 10s is negligible traffic.
+TV_LINK_KEEPALIVE_SECONDS = 10.0
 
 
 class Intent:
@@ -137,6 +141,14 @@ class TVPowerSyncDaemon:
 
         self.session_signals_registered = False
         self.system_signals_registered = False
+
+        # A single warm WebSocket keeps Tizen's network control service (and
+        # port 8001) answering, so the undock KEY_POWER lands immediately.
+        self.tv_link = tvlib.TvLink(config.tv_ip)
+        self._keepalive_stop = threading.Event()
+        threading.Thread(
+            target=self._keepalive_worker, name="tv-link-keepalive", daemon=True
+        ).start()
 
         # Startup reconciliation runs off the main loop: a CEC query can take
         # up to a second and must not delay early D-Bus/uevent handling.
@@ -514,6 +526,48 @@ class TVPowerSyncDaemon:
             with self._state_lock:
                 self._watchdog_running = False
 
+    def _keepalive_wanted(self) -> bool:
+        """Only hold the link while the TV is expected to be on and docked."""
+        if self.state != "awake":
+            return False
+        if self.read_external_display_status() != "connected":
+            return False
+        with self._intent_lock:
+            active = self._active_intent
+            if active is not None and active.kind == "off":
+                return False
+        elapsed = self._recent_off_elapsed()
+        return elapsed is None or elapsed >= OFF_GUARD_SECONDS
+
+    def _keepalive_worker(self) -> None:
+        """Keep the TV's WebSocket control channel warm while docked."""
+        delay = 1.0  # warm up promptly after a daemon restart
+        warm = False
+        while not self._keepalive_stop.wait(delay):
+            delay = TV_LINK_KEEPALIVE_SECONDS
+            try:
+                if not self._keepalive_wanted():
+                    if warm:
+                        self.tv_link.close()
+                        warm = False
+                    continue
+                ok = self.tv_link.keepalive()
+                if ok != warm:
+                    if ok:
+                        log.info(
+                            "[*] TV control channel is warm; sleep commands "
+                            "will not wait for port %d to wake.",
+                            tvlib.TV_WS_PORT,
+                        )
+                    else:
+                        log.debug(
+                            "TV control channel went cold; retrying every %ds.",
+                            int(TV_LINK_KEEPALIVE_SECONDS),
+                        )
+                    warm = ok
+            except Exception:
+                log.exception("TV control channel keepalive failed")
+
     def _set_offline_streak(self, value: int) -> None:
         with self._state_lock:
             self._offline_streak = value
@@ -661,6 +715,20 @@ class TVPowerSyncDaemon:
                     return
                 log.warning("Falling back to Wi-Fi WebSocket for TV standby.")
 
+            # The warm socket is sourced from Wi-Fi, so it outlives the dock
+            # removal. Use it before any probe or reconnect work.
+            if self.tv_link.warm and self.tv_link.send_key(
+                "KEY_POWER", timeout=2.5, cancel=cancel
+            ):
+                self._mark_commanded_off()
+                log.info(
+                    "[*] TV sleep command delivered on the warm channel (%s).",
+                    reason,
+                )
+                return
+            if cancel.is_set():
+                return
+
             attempts = 20 if undock else 4
             for attempt in range(1, attempts + 1):
                 if cancel.is_set():
@@ -674,11 +742,8 @@ class TVPowerSyncDaemon:
                 # A short probe keeps failed attempts cheap while Wi-Fi route
                 # failover settles; a reachable LAN answers in under a few ms.
                 if tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.25):
-                    if tvlib.send_key(
-                        self.config.tv_ip,
-                        "KEY_POWER",
-                        timeout=2.5,
-                        cancel=cancel,
+                    if self.tv_link.send_key(
+                        "KEY_POWER", timeout=2.5, cancel=cancel
                     ):
                         self._mark_commanded_off()
                         log.info(
@@ -1077,6 +1142,8 @@ def main() -> int:
         "D-Bus signals."
     )
     loop.run()
+    daemon._keepalive_stop.set()
+    daemon.tv_link.close()
     return 0
 
 

@@ -15,9 +15,11 @@ Configuration is read from the environment (all optional):
 
 from __future__ import annotations
 
+import base64
 import fcntl
 import glob
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -35,6 +37,7 @@ DEFAULT_TV_MAC = "40:16:3b:d0:4f:8b"
 DEFAULT_CEC_DEVICE = "/dev/cec0"
 DEFAULT_TV_MODE = "3840x2160@60"
 TV_WS_PORT = 8001
+_WS_NAME_B64 = base64.b64encode(b"SamsungTvRemote").decode("ascii")
 
 KNOWN_POWER_STATES = frozenset({"on", "standby", "to-on", "to-standby"})
 
@@ -166,6 +169,39 @@ def _enumerate_ipv4_interfaces() -> list[tuple[str, Optional[str]]]:
         except OSError:
             continue
     return result
+
+
+def _interface_ipv4(name: str) -> Optional[str]:
+    """Return the current IPv4 address of one interface, or None."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            ifreq = struct.pack("256s", name.encode()[:15])
+            flags = struct.unpack(
+                "H", fcntl.ioctl(sock.fileno(), _SIOCGIFFLAGS, ifreq)[16:18]
+            )[0]
+            if not flags & _IFF_UP:
+                return None
+            return socket.inet_ntoa(
+                fcntl.ioctl(sock.fileno(), _SIOCGIFADDR, ifreq)[20:24]
+            )
+    except OSError:
+        return None
+
+
+def wireless_ipv4_address() -> Optional[str]:
+    """Return the IPv4 address of an up Wi-Fi interface, if any.
+
+    The TV control channel is pinned to Wi-Fi because a socket bound to the
+    dock's Ethernet address dies the instant the dock is unplugged -- exactly
+    when the sleep key has to go out.
+    """
+    for _index, name in socket.if_nameindex():
+        if name == "lo" or not os.path.isdir(f"/sys/class/net/{name}/wireless"):
+            continue
+        address = _interface_ipv4(name)
+        if address:
+            return address
+    return None
 
 
 def local_ipv4_interfaces(force: bool = False) -> list[tuple[str, Optional[str]]]:
@@ -448,6 +484,200 @@ def send_key(
                 tv.close()
             except Exception:
                 pass
+
+
+class TvLink:
+    """A single, kept-warm WebSocket to the TV's remote-control endpoint.
+
+    Tizen stops answering on port 8001 after a few idle minutes. When that
+    happened, the undock path spent 6-8s in TCP retries before KEY_POWER could
+    be delivered. Holding one session open and pinging it keeps the TV's
+    network control service warm, and reusing the socket removes both the
+    connection handshake and the library's 1s key-press delay from the sleep
+    path.
+
+    The session is opened from the Wi-Fi source address: a socket bound to the
+    dock's Ethernet address is torn down the moment the dock disappears, which
+    was why the first warm-channel attempt still took 8s.
+
+    All calls are serialized: the keepalive thread and a power worker may race
+    for the link, and the TV should only see one session from us.
+    """
+
+    def __init__(self, tv_ip: str, timeout: float = 1.5) -> None:
+        self.tv_ip = tv_ip
+        self.timeout = timeout
+        self._lock = threading.Lock()
+        self._ws = None
+        self._warm = False
+
+    @property
+    def warm(self) -> bool:
+        return self._warm
+
+    # -- internals (call with the lock held) -----------------------------
+
+    def _open_locked(self, timeout: float, bind_wifi: bool = True):
+        """Open a session, optionally sourced from the Wi-Fi address.
+
+        The TCP socket is created and bound here because the SamsungTVWS
+        wrapper always lets the kernel choose the source address. It is handed
+        to websocket-client, which performs the HTTP upgrade and framing.
+        """
+        import websocket
+
+        sock = None
+        source = wireless_ipv4_address() if bind_wifi else None
+        if source:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            try:
+                sock.bind((source, 0))
+                sock.connect((self.tv_ip, TV_WS_PORT))
+            except OSError:
+                sock.close()
+                raise
+        url = (
+            f"ws://{self.tv_ip}:{TV_WS_PORT}"
+            f"/api/v2/channels/samsung.remote.control?name={_WS_NAME_B64}"
+        )
+        ws = websocket.WebSocket()
+        try:
+            ws.connect(url, timeout=timeout, socket=sock)
+            ws.settimeout(timeout)
+            while True:
+                raw = ws.recv()
+                if not raw:
+                    raise ConnectionError("TV closed the socket during handshake")
+                event = json.loads(raw).get("event")
+                if event == "ms.channel.connect":
+                    return ws
+                if event == "ms.channel.unauthorized":
+                    raise PermissionError("TV rejected the WebSocket session")
+        except Exception:
+            try:
+                ws.shutdown()
+            except Exception:
+                pass
+            if sock is not None:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+            raise
+
+    def _close_locked(self) -> None:
+        ws, self._ws = self._ws, None
+        self._warm = False
+        if ws is None:
+            return
+        try:
+            ws.close()
+        except Exception:
+            # websocket-client skips shutdown() when sending the close frame
+            # fails, which would leave the socket in CLOSE-WAIT forever.
+            pass
+        finally:
+            try:
+                ws.shutdown()
+            except Exception:
+                pass
+
+    def _ping_locked(self) -> bool:
+        """Ping the open session so the TV sees traffic on the link.
+
+        A missing pong only means the TV is busy; a closed or dead socket is
+        what matters, and pinging it surfaces that immediately.
+        """
+        ws = self._ws
+        if ws is None or not ws.connected:
+            return False
+        try:
+            from websocket import WebSocketTimeoutException
+        except ImportError:  # pragma: no cover - websocket-client ships with samsungtvws
+            WebSocketTimeoutException = TimeoutError  # type: ignore[assignment,misc]
+        try:
+            ws.settimeout(0.25)
+            ws.ping()
+            try:
+                ws.recv()  # pong, or an unrelated event; proves peer is alive
+            except WebSocketTimeoutException:
+                pass
+            return True
+        except Exception as exc:
+            log.debug("TV control channel ping failed: %s", exc)
+            return False
+        finally:
+            try:
+                ws.settimeout(self.timeout)
+            except Exception:
+                pass
+
+    # -- public API ------------------------------------------------------
+
+    def keepalive(self) -> bool:
+        """Keep the channel warm, opening (or re-opening) it if needed."""
+        with self._lock:
+            if self._ping_locked():
+                self._warm = True
+                return True
+            self._close_locked()
+            try:
+                self._ws = self._open_locked(self.timeout)
+            except Exception as exc:
+                log.debug("TV control channel unavailable: %s", exc)
+                return False
+            log.debug("TV control channel established.")
+            self._warm = True
+            return True
+
+    def send_key(
+        self,
+        key: str,
+        timeout: float = 2.5,
+        cancel: Optional[threading.Event] = None,
+    ) -> bool:
+        """Send a key over the warm link, reconnecting once on failure."""
+        if cancel is not None and cancel.is_set():
+            return False
+        payload = json.dumps(
+            {
+                "method": "ms.remote.control",
+                "params": {
+                    "Cmd": "Click",
+                    "DataOfCmd": key,
+                    "Option": "false",
+                    "TypeOfRemote": "SendRemoteKey",
+                },
+            }
+        )
+        with self._lock:
+            for attempt in (1, 2):
+                if cancel is not None and cancel.is_set():
+                    return False
+                try:
+                    if self._ws is None:
+                        # Prefer Wi-Fi so the session survives the undock;
+                        # the retry uses the default route (Ethernet).
+                        self._ws = self._open_locked(
+                            timeout, bind_wifi=attempt == 1
+                        )
+                    self._ws.send(payload)
+                    self._warm = True
+                    return True
+                except Exception as exc:
+                    log.warning(
+                        "Warm WebSocket %s failed (attempt %d/2): %s",
+                        key,
+                        attempt,
+                        exc,
+                    )
+                    self._close_locked()
+            return False
+
+    def close(self) -> None:
+        with self._lock:
+            self._close_locked()
 
 
 # ---------------------------------------------------------------------------
