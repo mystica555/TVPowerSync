@@ -644,7 +644,7 @@ only as a fallback. All commands use list-form <code>subprocess</code> calls (no
 metadata, CRTC timings, and plane usage.</p>
 <h3 id="25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code><a class="headerlink" href="#25-pair_samsung_tvpy" title="Link to this section">#</a></h3>
 <p>One-off WebSocket pairing helper (ports 8002/8001). Uses <code>TV_IP</code> and writes the
-token to <code>TV_TOKEN_FILE</code> (default <code>~/.local/state/drmstuff/tv_token.txt</code>).</p>
+token to <code>TV_TOKEN_FILE</code> (default <code>~/.local/state/tizenpowersync/tv_token.txt</code>).</p>
 <h3 id="26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code><a class="headerlink" href="#26-udev70-cec-uaccessrules" title="Link to this section">#</a></h3>
 <pre><code>KERNEL==&quot;cec*&quot;, SUBSYSTEM==&quot;cec&quot;, GROUP=&quot;video&quot;, MODE=&quot;0660&quot;, TAG+=&quot;uaccess&quot;
 </code></pre>
@@ -874,18 +874,19 @@ per ~75s, when the TV is unplugged from AC or deliberately off.</p>
 </tr>
 <tr>
 <td style="text-align:left"><code>TV_TOKEN_FILE</code></td>
-<td style="text-align:left"><code>~/.local/state/drmstuff/tv_token.txt</code></td>
+<td style="text-align:left"><code>~/.local/state/tizenpowersync/tv_token.txt</code></td>
 <td style="text-align:left">pairing helper</td>
 </tr>
 </tbody>
 </table></div>
-<p>The venv is best created with <code>--system-site-packages</code> so <code>dbus</code> and <code>gi</code> remain
-importable. <a href="README.html#deployment"><code>deploy.sh</code></a> prefers a repo venv, and if that venv cannot see the
-system bindings it writes a version-matched <code>000-system-bindings.pth</code> into the
-venv (the same effect as the flag) rather than re-creating it. It substitutes
-the selected interpreter into <code>ExecStart=@PYTHON@ ...</code>, rewrites the installed
-script shebangs to match, fails if no interpreter can import <code>dbus</code>/<code>gi</code>, and
-warns if <code>samsungtvws</code> is missing.</p>
+<p><a href="README.html#deployment"><code>deploy.sh</code></a> creates <code>venv/</code> with <code>--system-site-packages</code>
+when no usable venv is present, installs <code>samsungtvws</code>, and prefers that
+interpreter (<code>TV_PYTHON</code> overrides it). If an existing venv cannot see the system
+bindings it writes a version-matched <code>000-system-bindings.pth</code> into the venv (the
+same effect as the flag) rather than re-creating it. It substitutes the selected
+interpreter into <code>ExecStart=@PYTHON@ ...</code>, rewrites the installed script shebangs
+to match, fails if no interpreter can import <code>dbus</code>/<code>gi</code>, and warns if
+<code>samsungtvws</code> is missing.</p>
 </div>
       <footer class="doc-footer">
         <p class="foot-note">Converted from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/tizen-power-sync">GitHub</a> &middot; 31 Oct 2026</p>

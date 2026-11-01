@@ -131,7 +131,7 @@ metadata, CRTC timings, and plane usage.
 ### 2.5 `pair_samsung_tv.py`
 
 One-off WebSocket pairing helper (ports 8002/8001). Uses `TV_IP` and writes the
-token to `TV_TOKEN_FILE` (default `~/.local/state/drmstuff/tv_token.txt`).
+token to `TV_TOKEN_FILE` (default `~/.local/state/tizenpowersync/tv_token.txt`).
 
 ### 2.6 `udev/70-cec-uaccess.rules`
 
@@ -282,12 +282,13 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 | `TV_MODE` | `3840x2160@60` | mode re-assert |
 | `TV_LOG_LEVEL` | `INFO` | all scripts |
 | `TV_PYTHON` | repo `venv/bin/python` | `deploy.sh` unit substitution |
-| `TV_TOKEN_FILE` | `~/.local/state/drmstuff/tv_token.txt` | pairing helper |
+| `TV_TOKEN_FILE` | `~/.local/state/tizenpowersync/tv_token.txt` | pairing helper |
 
-The venv is best created with `--system-site-packages` so `dbus` and `gi` remain
-importable. [`deploy.sh`](README.md#deployment) prefers a repo venv, and if that venv cannot see the
-system bindings it writes a version-matched `000-system-bindings.pth` into the
-venv (the same effect as the flag) rather than re-creating it. It substitutes
-the selected interpreter into `ExecStart=@PYTHON@ ...`, rewrites the installed
-script shebangs to match, fails if no interpreter can import `dbus`/`gi`, and
-warns if `samsungtvws` is missing.
+[`deploy.sh`](README.md#deployment) creates `venv/` with `--system-site-packages`
+when no usable venv is present, installs `samsungtvws`, and prefers that
+interpreter (`TV_PYTHON` overrides it). If an existing venv cannot see the system
+bindings it writes a version-matched `000-system-bindings.pth` into the venv (the
+same effect as the flag) rather than re-creating it. It substitutes the selected
+interpreter into `ExecStart=@PYTHON@ ...`, rewrites the installed script shebangs
+to match, fails if no interpreter can import `dbus`/`gi`, and warns if
+`samsungtvws` is missing.

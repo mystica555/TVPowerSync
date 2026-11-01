@@ -7,11 +7,13 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 SYSTEMD_USER_DIR="$XDG_CONFIG_HOME/systemd/user"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$REPO_DIR/venv"
 
-echo "=== Deploying Samsung TV & DRM Utilities (XDG Compliant) ==="
+echo "=== Deploying TizenPowerSync (XDG Compliant) ==="
 echo "Target Bin Dir     : $XDG_BIN_HOME"
 echo "Target Config Dir  : $XDG_CONFIG_HOME"
 echo "Systemd User Dir   : $SYSTEMD_USER_DIR"
+echo "Virtualenv         : $VENV_DIR"
 
 # 0. Pick the interpreter that can import both the system bindings (dbus/gi)
 #    and samsungtvws. A venv that only contains samsungtvws is repaired by
@@ -64,9 +66,45 @@ PY
     "$venv_py" -c 'import dbus, gi' >/dev/null 2>&1
 }
 
+# Prefer a system interpreter that already exposes dbus/gi, so the venv can
+# borrow them through --system-site-packages.
+find_system_python() {
+    local candidate
+    for candidate in /usr/bin/python3 "$(command -v python3 || true)"; do
+        [[ -n "$candidate" && -x "$candidate" ]] || continue
+        if "$candidate" -c 'import dbus, gi' >/dev/null 2>&1; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ensure_samsungtvws() {
+    local venv_py="$1"
+    "$venv_py" -c 'import samsungtvws' >/dev/null 2>&1 && return 0
+    echo "  Installing samsungtvws into $venv_py..."
+    if "$venv_py" -m pip install --quiet --disable-pip-version-check samsungtvws; then
+        return 0
+    fi
+    echo "  Warning: pip could not install samsungtvws; Wi-Fi TV control will be disabled."
+    return 0
+}
+
+create_venv() {
+    local target="$1" system_py="$2"
+    echo "  Creating venv at $target (with system site packages)..."
+    if ! "$system_py" -m venv --system-site-packages "$target"; then
+        echo "  Error: could not create $target with $system_py." >&2
+        echo "         Install python3-venv, or set TV_PYTHON to an existing interpreter." >&2
+        return 1
+    fi
+    ensure_samsungtvws "$target/bin/python"
+}
+
 PYTHON_BIN="${TV_PYTHON:-}"
 if [[ -z "$PYTHON_BIN" ]]; then
-    for candidate in "$REPO_DIR/venv/bin/python" "$REPO_DIR/.venv/bin/python"; do
+    for candidate in "$VENV_DIR/bin/python" "$REPO_DIR/.venv/bin/python"; do
         [[ -x "$candidate" ]] || continue
         if repair_system_bindings "$candidate"; then
             PYTHON_BIN="$candidate"
@@ -75,15 +113,36 @@ if [[ -z "$PYTHON_BIN" ]]; then
         echo "  Skipping $candidate: missing dbus/gi and unable to borrow system bindings."
     done
 fi
+
+# No usable venv yet: build one that can still see the system bindings.
+if [[ -z "$PYTHON_BIN" ]]; then
+    SYSTEM_PY="$(find_system_python || true)"
+    if [[ -z "$SYSTEM_PY" ]]; then
+        SYSTEM_PY="$(command -v python3 || true)"
+        [[ -n "$SYSTEM_PY" ]] \
+            && echo "  Warning: $SYSTEM_PY cannot import dbus/gi yet; the venv will need the system packages."
+    fi
+    if [[ -n "$SYSTEM_PY" && -x "$SYSTEM_PY" ]] && create_venv "$VENV_DIR" "$SYSTEM_PY"; then
+        PYTHON_BIN="$VENV_DIR/bin/python"
+        repair_system_bindings "$PYTHON_BIN" || true
+    fi
+fi
+
 if [[ -z "$PYTHON_BIN" ]]; then
     PYTHON_BIN="/usr/bin/python3"
     [[ -x "$PYTHON_BIN" ]] || PYTHON_BIN="$(command -v python3 || true)"
-    echo "  Warning: no usable repo venv found; using system ${PYTHON_BIN:-python3}."
+    echo "  Warning: no usable venv could be created; using system ${PYTHON_BIN:-python3}."
 fi
 if [[ -z "$PYTHON_BIN" || ! -x "$PYTHON_BIN" ]]; then
     echo "Error: no usable Python interpreter found (set TV_PYTHON)." >&2
     exit 1
 fi
+
+# An existing repo venv is reused, but still gets the pip dependency.
+case "$PYTHON_BIN" in
+    "$VENV_DIR/bin/python"|"$REPO_DIR/.venv/bin/python") ensure_samsungtvws "$PYTHON_BIN" ;;
+esac
+
 # Make the path absolute without resolving the venv's python symlink (resolving
 # it would bypass the venv's site-packages entirely).
 PYTHON_BIN="$(cd "$(dirname "$PYTHON_BIN")" && pwd)/$(basename "$PYTHON_BIN")"

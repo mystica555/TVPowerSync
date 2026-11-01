@@ -54,7 +54,7 @@ All scripts read the same environment variables (defaults match the original set
 | `TV_MODE` | `3840x2160@60` | Mode re-asserted via `kscreen-doctor` |
 | `TV_LOG_LEVEL` | `INFO` | Logging level (`DEBUG` is useful for CEC failures) |
 | `TV_PYTHON` | repo `venv/bin/python` | Interpreter substituted into the systemd unit by `deploy.sh` |
-| `TV_TOKEN_FILE` | `~/.local/state/drmstuff/tv_token.txt` | Pairing token path |
+| `TV_TOKEN_FILE` | `~/.local/state/tizenpowersync/tv_token.txt` | Pairing token path |
 
 Override persistent values in the systemd unit (for example
 `systemctl --user edit tv-power-sync.service`), not in the scripts.
@@ -63,7 +63,7 @@ Override persistent values in the systemd unit (for example
 
 ## Directory Structure & XDG Compliance
 
-- **Source Repository**: `~/src/drmstuff/`
+- **Source Repository**: `~/src/tizenpowersync/`
 - **Shared Helpers**: [`tvlib.py`](ARCHITECTURE.md#27-tvlibpy) (config, logging, WoL, CEC, sysfs, backoff)
 - **User Executables**: `~/.local/bin/` (`control_tv`, `tv_power_daemon`, `boot_wol`, `parse_drm_info`, `pair_samsung_tv`, `tvlib.py`)
 - **Systemd User Service**: `~/.config/systemd/user/tv-power-sync.service`
@@ -74,22 +74,24 @@ Override persistent values in the systemd unit (for example
 
 ## Deployment
 
-The daemon needs `dbus` and `gi` (system packages) plus `samsungtvws` (pip). The
-recommended layout is a venv that can still see the system bindings:
+The daemon needs `dbus` and `gi` (system packages) plus `samsungtvws` (pip).
+`deploy.sh` provisions both:
 
 ```bash
-python3 -m venv --system-site-packages venv
-./venv/bin/pip install samsungtvws
 ./deploy.sh
 ```
 
-`deploy.sh` installs `tvlib.py` alongside the scripts, selects an interpreter
-that can import `dbus` and `gi` (`TV_PYTHON` overrides it), substitutes it into
-`tv-power-sync.service`, rewrites the installed shebangs to it, and restarts the
-user service. If an existing venv cannot see `dbus`/`gi`, the script adds a
-version-matched `000-system-bindings.pth` to that venv (equivalent to
-`--system-site-packages`) instead of re-creating it. It fails with an explicit
-message if no interpreter can provide the system bindings, and warns if
+If no usable `venv/` exists, the script creates one with
+`python3 -m venv --system-site-packages venv` (so the system `dbus`/`gi`
+bindings stay importable) and installs `samsungtvws` into it. It then installs
+`tvlib.py` alongside the scripts, substitutes the selected interpreter into
+`tv-power-sync.service` (`TV_PYTHON` overrides the choice), rewrites the
+installed shebangs to it, and restarts the user service.
+
+An existing venv that cannot see `dbus`/`gi` is repaired by adding a
+version-matched `000-system-bindings.pth` (equivalent to
+`--system-site-packages`) instead of being re-created. The script fails with an
+explicit message if no interpreter can provide the system bindings, and warns if
 `samsungtvws` is missing (Wi-Fi control disabled).
 
 ---

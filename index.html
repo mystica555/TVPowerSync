@@ -609,7 +609,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 </tr>
 <tr>
 <td style="text-align:left"><code>TV_TOKEN_FILE</code></td>
-<td style="text-align:left"><code>~/.local/state/drmstuff/tv_token.txt</code></td>
+<td style="text-align:left"><code>~/.local/state/tizenpowersync/tv_token.txt</code></td>
 <td style="text-align:left">Pairing token path</td>
 </tr>
 </tbody>
@@ -619,7 +619,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <hr />
 <h2 id="directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance<a class="headerlink" href="#directory-structure-xdg-compliance" title="Link to this section">#</a></h2>
 <ul>
-<li><strong>Source Repository</strong>: <code>~/src/drmstuff/</code></li>
+<li><strong>Source Repository</strong>: <code>~/src/tizenpowersync/</code></li>
 <li><strong>Shared Helpers</strong>: <a href="ARCHITECTURE.html#27-tvlibpy"><code>tvlib.py</code></a> (config, logging, WoL, CEC, sysfs, backoff)</li>
 <li><strong>User Executables</strong>: <code>~/.local/bin/</code> (<code>control_tv</code>, <code>tv_power_daemon</code>, <code>boot_wol</code>, <code>parse_drm_info</code>, <code>pair_samsung_tv</code>, <code>tvlib.py</code>)</li>
 <li><strong>Systemd User Service</strong>: <code>~/.config/systemd/user/tv-power-sync.service</code></li>
@@ -628,19 +628,20 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 </ul>
 <hr />
 <h2 id="deployment">Deployment<a class="headerlink" href="#deployment" title="Link to this section">#</a></h2>
-<p>The daemon needs <code>dbus</code> and <code>gi</code> (system packages) plus <code>samsungtvws</code> (pip). The
-recommended layout is a venv that can still see the system bindings:</p>
-<pre><code class="language-bash">python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>--system-site-packages<span class="w"> </span>venv
-./venv/bin/pip<span class="w"> </span>install<span class="w"> </span>samsungtvws
-./deploy.sh
+<p>The daemon needs <code>dbus</code> and <code>gi</code> (system packages) plus <code>samsungtvws</code> (pip).
+<code>deploy.sh</code> provisions both:</p>
+<pre><code class="language-bash">./deploy.sh
 </code></pre>
-<p><code>deploy.sh</code> installs <code>tvlib.py</code> alongside the scripts, selects an interpreter
-that can import <code>dbus</code> and <code>gi</code> (<code>TV_PYTHON</code> overrides it), substitutes it into
-<code>tv-power-sync.service</code>, rewrites the installed shebangs to it, and restarts the
-user service. If an existing venv cannot see <code>dbus</code>/<code>gi</code>, the script adds a
-version-matched <code>000-system-bindings.pth</code> to that venv (equivalent to
-<code>--system-site-packages</code>) instead of re-creating it. It fails with an explicit
-message if no interpreter can provide the system bindings, and warns if
+<p>If no usable <code>venv/</code> exists, the script creates one with
+<code>python3 -m venv --system-site-packages venv</code> (so the system <code>dbus</code>/<code>gi</code>
+bindings stay importable) and installs <code>samsungtvws</code> into it. It then installs
+<code>tvlib.py</code> alongside the scripts, substitutes the selected interpreter into
+<code>tv-power-sync.service</code> (<code>TV_PYTHON</code> overrides the choice), rewrites the
+installed shebangs to it, and restarts the user service.</p>
+<p>An existing venv that cannot see <code>dbus</code>/<code>gi</code> is repaired by adding a
+version-matched <code>000-system-bindings.pth</code> (equivalent to
+<code>--system-site-packages</code>) instead of being re-created. The script fails with an
+explicit message if no interpreter can provide the system bindings, and warns if
 <code>samsungtvws</code> is missing (Wi-Fi control disabled).</p>
 <hr />
 <h2 id="cli-usage">CLI Usage<a class="headerlink" href="#cli-usage" title="Link to this section">#</a></h2>

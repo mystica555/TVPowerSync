@@ -280,7 +280,7 @@ def parse_card(card_name: str, card_data: Dict[str, Any]):
     print("\n" + "=" * 80)
 
 def main():
-    json_path = sys.argv[1] if len(sys.argv) > 1 else "/home/mike/src/drmstuff/drm_info.json"
+    json_path = sys.argv[1] if len(sys.argv) > 1 else "/home/mike/src/tizenpowersync/drm_info.json"
     if not os.path.exists(json_path):
         print(f"File {json_path} not found. Running `drm_info -j` directly...")
         proc = subprocess.run(["drm_info", "-j"], capture_output=True, text=True, check=True)
