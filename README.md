@@ -8,7 +8,7 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
 
 ## Full Feature Set
 
-1. **Real-Time Hardware DPMS Synchronization (`tv_power_daemon.py`)**:
+1. **Real-Time Hardware DPMS Synchronization ([`tv_power_daemon.py`](ARCHITECTURE.md#21-tv_power_daemonpy-tv-power-syncservice))**:
    - Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked.
    - **Screen Off**: locks the session (`loginctl lock-session`) and then uses **one** power path — discrete HDMI-CEC `STANDBY` when docked, with WebSocket `KEY_POWER` only as a fallback if CEC fails. The two are never sent together, so a toggle can't undo the standby.
    - **Screen On**: wakes the TV with multi-NIC Wake-on-LAN bursts and discrete HDMI-CEC (`IMAGE_VIEW_ON` + `ACTIVE_SOURCE`), then re-asserts the native mode via `kscreen-doctor output.<connector>.mode.<TV_MODE>` once the TV confirms it is awake.
@@ -32,11 +32,11 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
    - Failed wakes back off exponentially (60s → 120s → ... → 15min) instead of retrying every ~75s forever. A dock connect, DPMS-on, lid-open or unlock resets the backoff.
    - 12-second duplicate-off cooldown, shared by CEC and WebSocket paths.
 
-5. **Singleton Early-Boot Wake (`boot_wol.py` & `tv-boot-wol.service`)**:
+5. **Singleton Early-Boot Wake ([`boot_wol.py`](ARCHITECTURE.md#22-boot_wolpy-tv-boot-wolservice) & `tv-boot-wol.service`)**:
    - systemd oneshot (`RemainAfterExit=yes`) ordered after `network-online.target` and before `sddm.service`.
    - Wakes the TV once per boot if the dock/display or home network is present and the panel is not in DPMS Off.
 
-6. **Manual CLI Control (`control_tv.py`) & DRM Analyzer (`parse_drm_info.py`)**
+6. **Manual CLI Control ([`control_tv.py`](ARCHITECTURE.md#23-control_tvpy)) & DRM Analyzer ([`parse_drm_info.py`](ARCHITECTURE.md#24-parse_drm_infopy))**
    - `control_tv`: inspect display/CEC/screensaver/network status or manually trigger wake, standby, or WoL.
    - `parse_drm_info`: summarize GPU capabilities, CRTC pipes, planes, HDR metadata, and connector modes.
 
@@ -64,7 +64,7 @@ Override persistent values in the systemd unit (for example
 ## Directory Structure & XDG Compliance
 
 - **Source Repository**: `~/src/drmstuff/`
-- **Shared Helpers**: `tvlib.py` (config, logging, WoL, CEC, sysfs, backoff)
+- **Shared Helpers**: [`tvlib.py`](ARCHITECTURE.md#27-tvlibpy) (config, logging, WoL, CEC, sysfs, backoff)
 - **User Executables**: `~/.local/bin/` (`control_tv`, `tv_power_daemon`, `boot_wol`, `parse_drm_info`, `pair_samsung_tv`, `tvlib.py`)
 - **Systemd User Service**: `~/.config/systemd/user/tv-power-sync.service`
 - **Systemd Boot Service**: `/etc/systemd/system/tv-boot-wol.service`

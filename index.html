@@ -507,7 +507,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <h2 id="full-feature-set">Full Feature Set<a class="headerlink" href="#full-feature-set" title="Link to this section">#</a></h2>
 <ol>
 <li>
-<p><strong>Real-Time Hardware DPMS Synchronization (<code>tv_power_daemon.py</code>)</strong>:</p>
+<p><strong>Real-Time Hardware DPMS Synchronization (<a href="ARCHITECTURE.html#21-tv_power_daemonpy-tv-power-syncservice"><code>tv_power_daemon.py</code></a>)</strong>:</p>
 <ul>
 <li>Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked.</li>
 <li><strong>Screen Off</strong>: locks the session (<code>loginctl lock-session</code>) and then uses <strong>one</strong> power path — discrete HDMI-CEC <code>STANDBY</code> when docked, with WebSocket <code>KEY_POWER</code> only as a fallback if CEC fails. The two are never sent together, so a toggle can’t undo the standby.</li>
@@ -543,14 +543,14 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 </ul>
 </li>
 <li>
-<p><strong>Singleton Early-Boot Wake (<code>boot_wol.py</code> &amp; <code>tv-boot-wol.service</code>)</strong>:</p>
+<p><strong>Singleton Early-Boot Wake (<a href="ARCHITECTURE.html#22-boot_wolpy-tv-boot-wolservice"><code>boot_wol.py</code></a> &amp; <code>tv-boot-wol.service</code>)</strong>:</p>
 <ul>
 <li>systemd oneshot (<code>RemainAfterExit=yes</code>) ordered after <code>network-online.target</code> and before <code>sddm.service</code>.</li>
 <li>Wakes the TV once per boot if the dock/display or home network is present and the panel is not in DPMS Off.</li>
 </ul>
 </li>
 <li>
-<p><strong>Manual CLI Control (<code>control_tv.py</code>) &amp; DRM Analyzer (<code>parse_drm_info.py</code>)</strong></p>
+<p><strong>Manual CLI Control (<a href="ARCHITECTURE.html#23-control_tvpy"><code>control_tv.py</code></a>) &amp; DRM Analyzer (<a href="ARCHITECTURE.html#24-parse_drm_infopy"><code>parse_drm_info.py</code></a>)</strong></p>
 <ul>
 <li><code>control_tv</code>: inspect display/CEC/screensaver/network status or manually trigger wake, standby, or WoL.</li>
 <li><code>parse_drm_info</code>: summarize GPU capabilities, CRTC pipes, planes, HDR metadata, and connector modes.</li>
@@ -612,7 +612,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <h2 id="directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance<a class="headerlink" href="#directory-structure-xdg-compliance" title="Link to this section">#</a></h2>
 <ul>
 <li><strong>Source Repository</strong>: <code>~/src/drmstuff/</code></li>
-<li><strong>Shared Helpers</strong>: <code>tvlib.py</code> (config, logging, WoL, CEC, sysfs, backoff)</li>
+<li><strong>Shared Helpers</strong>: <a href="ARCHITECTURE.html#27-tvlibpy"><code>tvlib.py</code></a> (config, logging, WoL, CEC, sysfs, backoff)</li>
 <li><strong>User Executables</strong>: <code>~/.local/bin/</code> (<code>control_tv</code>, <code>tv_power_daemon</code>, <code>boot_wol</code>, <code>parse_drm_info</code>, <code>pair_samsung_tv</code>, <code>tvlib.py</code>)</li>
 <li><strong>Systemd User Service</strong>: <code>~/.config/systemd/user/tv-power-sync.service</code></li>
 <li><strong>Systemd Boot Service</strong>: <code>/etc/systemd/system/tv-boot-wol.service</code></li>

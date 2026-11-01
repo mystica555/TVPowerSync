@@ -528,8 +528,8 @@ laptop’s Wi-Fi interface (<code>wlo1</code>).</li>
 </ul>
 </li>
 </ul>
-<p>All of these are configurable via <code>TV_IP</code>, <code>TV_MAC</code>, <code>CEC_DEVICE</code>, <code>TV_MODE</code>
-and <code>TV_LOG_LEVEL</code> (see <code>tvlib.Config</code>).</p>
+<p>All of these are <a href="#5-configuration">configurable</a> via <code>TV_IP</code>, <code>TV_MAC</code>, <code>CEC_DEVICE</code>, <code>TV_MODE</code>
+and <code>TV_LOG_LEVEL</code> (see <a href="#27-tvlibpy"><code>tvlib.Config</code></a>).</p>
 <hr />
 <h2 id="2-core-components">2. Core Components<a class="headerlink" href="#2-core-components" title="Link to this section">#</a></h2>
 <h3 id="21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)<a class="headerlink" href="#21-tv_power_daemonpy-tv-power-syncservice" title="Link to this section">#</a></h3>
@@ -616,7 +616,7 @@ it query CEC.</li>
 <li>A CEC <code>standby</code>/<code>to-standby</code> reading wakes immediately; <code>offline</code> requires
 two consecutive checks. The dock state is re-read after the query so an
 unplug during the check cannot trigger a false wake.</li>
-<li>Failed wake attempts apply exponential backoff (60s, 120s, 240s, … up to
+<li>Failed wake attempts apply <a href="#35-watchdog-backoff">exponential backoff</a> (60s, 120s, 240s, … up to
 900s). Backoff resets on dock connect, DPMS-on, lid-open or unlock.</li>
 </ul>
 </li>
@@ -674,7 +674,7 @@ unplugged.</li>
 <li><strong>Video mode re-assert</strong> — <code>kscreen-doctor output.&lt;connector&gt;.mode.&lt;TV_MODE&gt;</code>.
 Using the mode string rather than a positional index survives mode-table
 changes.</li>
-<li><strong>Backoff</strong> — a failed, still-current wake doubles the delay (max 15min).
+<li><strong><a href="#35-watchdog-backoff">Backoff</a></strong> — a failed, still-current wake doubles the delay (max 15min).
 Superseded wakes do not apply backoff.</li>
 </ol>
 <p><code>KEY_POWER</code> is never sent during a wake: Samsung treats it as a toggle, so wake
@@ -865,7 +865,7 @@ per ~75s, when the TV is unplugged from AC or deliberately off.</p>
 </tbody>
 </table></div>
 <p>The venv is best created with <code>--system-site-packages</code> so <code>dbus</code> and <code>gi</code> remain
-importable. <code>deploy.sh</code> prefers a repo venv, and if that venv cannot see the
+importable. <a href="README.html#deployment"><code>deploy.sh</code></a> prefers a repo venv, and if that venv cannot see the
 system bindings it writes a version-matched <code>000-system-bindings.pth</code> into the
 venv (the same effect as the flag) rather than re-creating it. It substitutes
 the selected interpreter into <code>ExecStart=@PYTHON@ ...</code>, rewrites the installed

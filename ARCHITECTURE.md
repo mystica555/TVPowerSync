@@ -26,8 +26,8 @@ monitor for a Linux laptop running **KDE Plasma 6 (Wayland)**.
   - Control channels: **WoL** (UDP 9/7), **HDMI-CEC** (`/dev/cec0`), and the
     **Tizen WebSocket API** (port `8001`).
 
-All of these are configurable via `TV_IP`, `TV_MAC`, `CEC_DEVICE`, `TV_MODE`
-and `TV_LOG_LEVEL` (see `tvlib.Config`).
+All of these are [configurable](#5-configuration) via `TV_IP`, `TV_MAC`, `CEC_DEVICE`, `TV_MODE`
+and `TV_LOG_LEVEL` (see [`tvlib.Config`](#27-tvlibpy)).
 
 ---
 
@@ -106,7 +106,7 @@ wake” with “sleep now” and could not stop an in-flight sleep retry.
    - A CEC `standby`/`to-standby` reading wakes immediately; `offline` requires
      two consecutive checks. The dock state is re-read after the query so an
      unplug during the check cannot trigger a false wake.
-   - Failed wake attempts apply exponential backoff (60s, 120s, 240s, ... up to
+   - Failed wake attempts apply [exponential backoff](#35-watchdog-backoff) (60s, 120s, 240s, ... up to
      900s). Backoff resets on dock connect, DPMS-on, lid-open or unlock.
 
 ### 2.2 `boot_wol.py` (`tv-boot-wol.service`)
@@ -179,7 +179,7 @@ lid open) and the watchdog.
 7. **Video mode re-assert** — `kscreen-doctor output.<connector>.mode.<TV_MODE>`.
    Using the mode string rather than a positional index survives mode-table
    changes.
-8. **Backoff** — a failed, still-current wake doubles the delay (max 15min).
+8. **[Backoff](#35-watchdog-backoff)** — a failed, still-current wake doubles the delay (max 15min).
    Superseded wakes do not apply backoff.
 
 `KEY_POWER` is never sent during a wake: Samsung treats it as a toggle, so wake
@@ -277,7 +277,7 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 | `TV_TOKEN_FILE` | `~/.local/state/drmstuff/tv_token.txt` | pairing helper |
 
 The venv is best created with `--system-site-packages` so `dbus` and `gi` remain
-importable. `deploy.sh` prefers a repo venv, and if that venv cannot see the
+importable. [`deploy.sh`](README.md#deployment) prefers a repo venv, and if that venv cannot see the
 system bindings it writes a version-matched `000-system-bindings.pth` into the
 venv (the same effect as the flag) rather than re-creating it. It substitutes
 the selected interpreter into `ExecStart=@PYTHON@ ...`, rewrites the installed
