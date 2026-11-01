@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Automated power synchronization, dock/lid state tracking, hardware DPMS monitoring, and DRM capabilities analysis for a Samsung Tizen Smart TV (UN40KU7000, 4K60 UHD) connected as an external…">
+<title>DRM &amp; Samsung TV Power Management Suite</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233556e8'/%3E%3Cg fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Crect x='7' y='9' width='18' height='12' rx='2'/%3E%3Cpath d='M13 25h6M16 21v4'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f8faff;
+  --surface-3: #eef2fa;
+  --text: #101725;
+  --text-soft: #33405a;
+  --muted: #69758c;
+  --border: #e2e7f1;
+  --border-strong: #cfd8e8;
+  --accent: #3556e8;
+  --accent-ink: #2743c9;
+  --accent-2: #0e9f95;
+  --code-bg: #0c1220;
+  --code-border: #1e2a3f;
+  --code-text: #d6e0f0;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .05);
+  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 24px 60px -28px rgba(16, 24, 40, .28);
+  --glow-a: rgba(53, 86, 232, .13);
+  --glow-b: rgba(14, 159, 149, .10);
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #070a10;
+    --surface: #0d121b;
+    --surface-2: #111826;
+    --surface-3: #162032;
+    --text: #e8edf6;
+    --text-soft: #bdc8da;
+    --muted: #8b99af;
+    --border: #1d2737;
+    --border-strong: #2a3850;
+    --accent: #7d9cff;
+    --accent-ink: #a5b9ff;
+    --accent-2: #2fd4c2;
+    --code-bg: #060a12;
+    --code-border: #1a2434;
+    --code-text: #d5e0f2;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 30px 70px -30px rgba(0, 0, 0, .8);
+    --glow-a: rgba(84, 110, 255, .16);
+    --glow-b: rgba(21, 190, 170, .10);
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(820px 480px at 8% -8%, var(--glow-a), transparent 70%),
+    radial-gradient(700px 420px at 96% 2%, var(--glow-b), transparent 72%);
+}
+::selection { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.skip-link {
+  position: fixed; top: -100px; left: 16px; z-index: 999;
+  padding: 10px 16px; border: 1px solid var(--border-strong); border-radius: 10px;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+  font-size: .85rem; font-weight: 600; text-decoration: none;
+  transition: top .15s ease;
+}
+.skip-link:focus { top: 16px; }
+
+/* Top bar */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+@supports (backdrop-filter: blur(12px)) {
+  .topbar {
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: blur(14px) saturate(150%);
+  }
+}
+.topbar-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 10px clamp(16px, 3vw, 28px);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.brand { display: flex; align-items: center; gap: 11px; min-width: 0; color: var(--text); text-decoration: none; }
+.brand-mark {
+  width: 36px; height: 36px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 11px; color: #fff;
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--accent) 70%, transparent), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.brand-copy { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-copy strong { font-size: .9rem; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+.brand-copy small { margin-top: 3px; font-size: .63rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.topbar-nav { display: flex; align-items: center; gap: 4px; }
+.pill {
+  padding: 7px 12px; border: 1px solid transparent; border-radius: 999px;
+  color: var(--muted); font-size: .78rem; font-weight: 550; text-decoration: none;
+  white-space: nowrap;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.pill:hover { color: var(--text); background: var(--surface-3); }
+.pill.is-active { color: var(--text); background: var(--surface); border-color: var(--border); box-shadow: var(--shadow-sm); }
+.pill.ghost { color: var(--accent); }
+.pill.ghost:hover {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Layout */
+.shell {
+  max-width: 1200px; margin: 0 auto;
+  padding: clamp(20px, 3vw, 32px) clamp(16px, 3vw, 28px) 80px;
+  display: grid; grid-template-columns: 248px minmax(0, 1fr);
+  gap: clamp(24px, 3vw, 44px);
+  align-items: start;
+}
+.sidebar {
+  position: sticky; top: 84px;
+  max-height: calc(100vh - 104px);
+  overflow: auto; padding: 4px 2px 20px;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+.side-label {
+  margin: 0 0 10px; font-size: .64rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--muted);
+}
+.doc-switch { display: grid; gap: 8px; margin: 0 0 26px; }
+.switch {
+  display: block; padding: 11px 13px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  text-decoration: none;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.switch:hover { border-color: var(--border-strong); background: var(--surface); transform: translateY(-1px); }
+.switch.is-active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.switch-kicker { display: block; font-size: .62rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.switch-title { display: block; margin-top: 3px; font-size: .84rem; font-weight: 600; letter-spacing: -.005em; color: var(--text); }
+.switch-meta { display: block; margin-top: 2px; font-size: .71rem; color: var(--muted); }
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc > ul { border-left: 1px solid var(--border); }
+.toc a {
+  display: block; margin-left: -1px; padding: 5px 8px 5px 12px;
+  border-left: 2px solid transparent;
+  color: var(--muted); font-size: .82rem; line-height: 1.4; text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.toc a:hover {
+  color: var(--text); border-left-color: var(--accent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+}
+.toc ul ul a { padding-left: 24px; font-size: .77rem; }
+.toc a code { padding: 0; border: 0; background: none; color: inherit; font-size: .92em; }
+.side-foot { margin: 26px 0 0; padding-top: 16px; border-top: 1px solid var(--border); font-size: .7rem; line-height: 1.6; color: var(--muted); }
+.side-foot a { color: var(--muted); text-decoration-color: var(--border-strong); }
+.side-foot a:hover { color: var(--accent); }
+
+/* Mobile "On this page" */
+.mobile-toc { display: none; grid-column: 1 / -1; }
+.mobile-toc details {
+  margin: 0; padding: 0 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.mobile-toc summary {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; list-style: none; cursor: pointer;
+  color: var(--text); font-size: .8rem; font-weight: 600;
+}
+.mobile-toc summary::-webkit-details-marker { display: none; }
+.mobile-toc summary::after { content: "+"; color: var(--muted); font-size: 1rem; font-weight: 400; }
+.mobile-toc details[open] summary::after { content: "\2212"; }
+.mobile-toc .toc { padding: 0 0 10px; }
+.mobile-toc .toc > ul { border-left: 0; }
+.mobile-toc .toc a { padding-left: 2px; border-left: 0; }
+.mobile-toc .toc ul ul a { padding-left: 18px; }
+
+/* Page card */
+.doc {
+  position: relative; min-width: 0; overflow: hidden;
+  padding: clamp(24px, 4.4vw, 52px);
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+.doc::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2) 45%, transparent 82%);
+  opacity: .85;
+}
+
+/* Typography */
+.doc-body > h1 {
+  margin: .1em 0 .55em;
+  font-family: var(--serif); font-weight: 600;
+  font-size: clamp(2rem, 4.2vw, 2.95rem);
+  line-height: 1.13; letter-spacing: -.022em;
+  text-wrap: balance;
+}
+.eyebrow {
+  display: flex; align-items: center; gap: 9px;
+  margin: 0 0 14px;
+  font-size: .66rem; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent);
+}
+.eyebrow::before {
+  content: ""; width: 22px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.doc-body > h1 + p {
+  max-width: 68ch; margin: 0 0 1.4rem;
+  font-size: 1.06rem; line-height: 1.75; color: var(--muted);
+}
+.doc-body h2 {
+  position: relative; margin: 3.1rem 0 1rem; padding-bottom: .55rem;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(1.25rem, 2.4vw, 1.5rem); font-weight: 650;
+  letter-spacing: -.018em; line-height: 1.28;
+  text-wrap: balance; scroll-margin-top: 88px;
+}
+.doc-body h2::after {
+  content: ""; position: absolute; left: 0; bottom: -1px;
+  width: 52px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.doc-body h3 {
+  margin: 2.1rem 0 .55rem;
+  font-size: 1.12rem; font-weight: 650; letter-spacing: -.012em;
+  line-height: 1.4; text-wrap: balance; scroll-margin-top: 88px;
+}
+.doc-body h4 { margin: 1.6rem 0 .4rem; font-size: .98rem; font-weight: 650; }
+.doc-body p { margin: 0 0 1.05rem; color: var(--text-soft); }
+.doc-body strong { color: var(--text); font-weight: 650; }
+.doc-body em { color: var(--text); }
+.doc-body ul, .doc-body ol { margin: 0 0 1.05rem; padding-left: 1.35rem; }
+.doc-body li { margin: .32rem 0; color: var(--text-soft); }
+.doc-body li > p { margin: 0 0 .6rem; }
+.doc-body li > p:last-child { margin-bottom: 0; }
+.doc-body li > ul, .doc-body li > ol { margin: .35rem 0 .15rem; }
+.doc-body ul > li::marker { color: var(--accent); }
+.doc-body ol > li::marker { color: var(--muted); font-size: .9em; font-variant-numeric: tabular-nums; }
+.doc-body > ol { margin-top: 1.25rem; }
+
+/* README feature cards */
+.page-readme .doc-body > ol {
+  display: grid; gap: 12px;
+  margin-top: 1.25rem; padding: 0;
+  list-style: none; counter-reset: feature;
+}
+.page-readme .doc-body > ol > li {
+  counter-increment: feature;
+  position: relative; margin: 0;
+  padding: 15px 18px 12px 54px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: linear-gradient(180deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 40%, transparent));
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.page-readme .doc-body > ol > li:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.page-readme .doc-body > ol > li::before {
+  content: counter(feature);
+  position: absolute; left: 16px; top: 15px;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 8px; border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent); font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.page-readme .doc-body > ol > li > p:first-child {
+  margin: 0 0 6px; color: var(--text);
+  font-size: .98rem; line-height: 1.6; letter-spacing: -.006em;
+}
+.page-readme .doc-body > ol > li > ul { margin: 8px 0 3px; padding-left: 1.1rem; font-size: .94rem; }
+.page-readme .doc-body > ol > li > ul > li { margin: .28rem 0; }
+
+/* Tables */
+.doc-body .table-wrap {
+  margin: 1.35rem 0 1.5rem;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: var(--surface-2);
+  overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  box-shadow: var(--shadow-sm);
+}
+.doc-body table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: .86rem; line-height: 1.55; }
+.doc-body thead th {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-2));
+  color: var(--muted); font-size: .64rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; text-align: left; white-space: nowrap;
+}
+.doc-body tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); color: var(--text-soft); vertical-align: top; }
+.doc-body tbody td:first-child { color: var(--text); font-weight: 550; }
+.doc-body tbody tr:last-child td { border-bottom: 0; }
+.doc-body tbody tr:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.doc-body td code { white-space: normal; overflow-wrap: anywhere; }
+
+/* Code */
+.doc-body :not(pre) > code {
+  padding: .12em .38em;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent-ink);
+  font-family: var(--mono); font-size: .85em;
+  white-space: normal;
+}
+.doc-body pre {
+  margin: 1.25rem 0 1.4rem; padding: 16px 18px;
+  border: 1px solid var(--code-border); border-radius: 13px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-family: var(--mono); font-size: .83rem; line-height: 1.7;
+  overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: #31405a transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03);
+}
+.doc-body pre code {
+  padding: 0; border: 0; background: none;
+  color: inherit; font-family: inherit; font-size: 1em; white-space: pre;
+}
+.doc-body pre::-webkit-scrollbar { height: 8px; }
+.doc-body pre::-webkit-scrollbar-thumb { background: #31405a; border-radius: 99px; }
+.doc-body pre .c, .doc-body pre .c1, .doc-body pre .cm { color: #6f8099; font-style: italic; }
+.doc-body pre .k, .doc-body pre .kn, .doc-body pre .kd { color: #c792ea; }
+.doc-body pre .s, .doc-body pre .s1, .doc-body pre .s2, .doc-body pre .sb { color: #a8e0a0; }
+.doc-body pre .nb, .doc-body pre .nf { color: #82aaff; }
+.doc-body pre .nv { color: #ffcb6b; }
+.doc-body pre .o, .doc-body pre .ow { color: #89ddff; }
+.doc-body pre .m, .doc-body pre .mi { color: #f78c6c; }
+.doc-body pre .w { color: inherit; }
+
+/* Callouts and rules */
+.doc-body blockquote {
+  margin: 1.35rem 0 1.6rem; padding: 14px 18px 14px 20px;
+  border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 90%);
+}
+.doc-body blockquote::before {
+  content: "Note"; display: block; margin-bottom: 4px;
+  color: var(--accent); font-size: .62rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
+}
+.doc-body blockquote p { margin: 0; font-size: .95rem; color: var(--text-soft); }
+.doc-body blockquote a { font-weight: 600; }
+.doc-body hr {
+  height: 1px; margin: 2.2rem 0; border: 0;
+  background: linear-gradient(90deg, var(--border-strong), var(--border) 40%, transparent);
+}
+.doc-body hr + h2 { margin-top: 1.7rem; }
+
+/* Heading permalinks */
+.headerlink {
+  float: right; margin-left: 10px;
+  color: var(--muted); font-size: .75em; font-weight: 400; text-decoration: none;
+  opacity: 0; transition: opacity .15s, color .15s;
+}
+h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity: .7; }
+.headerlink:hover { color: var(--accent); opacity: 1 !important; }
+
+/* Footer */
+.doc-footer {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px;
+  margin-top: 3rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.foot-note { margin: 0; color: var(--muted); font-size: .74rem; }
+.foot-note a { color: var(--muted); }
+.next-card {
+  display: flex; flex-direction: column; gap: 2px;
+  max-width: 340px; padding: 12px 16px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface-2); text-decoration: none;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.next-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  transform: translateY(-1px); box-shadow: var(--shadow-sm);
+}
+.next-kicker { color: var(--accent); font-size: .62rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.next-title { color: var(--text); font-size: .9rem; font-weight: 600; letter-spacing: -.005em; }
+.next-title::after { content: " \2192"; color: var(--accent); font-weight: 600; }
+.next-card.back .next-title::after { content: ""; }
+.next-meta { margin-top: 1px; color: var(--muted); font-size: .73rem; }
+
+@media (max-width: 1024px) {
+  .shell { grid-template-columns: minmax(0, 1fr); max-width: 900px; }
+  .sidebar { display: none; }
+  .mobile-toc { display: block; }
+}
+@media (max-width: 640px) {
+  .brand-copy small { display: none; }
+  .topbar-nav .ghost { display: none; }
+  .pill { padding: 6px 10px; font-size: .74rem; }
+  .doc { padding: 20px 18px 26px; border-radius: 16px; }
+  .doc::before { border-radius: 16px 16px 0 0; }
+  .doc-body > h1 { font-size: clamp(1.75rem, 7vw, 2.3rem); }
+  .doc-footer { flex-direction: column; align-items: stretch; }
+  .next-card { max-width: none; }
+  .foot-note { order: 2; }
+}
+@media print {
+  :root {
+    --bg: #fff; --surface: #fff; --surface-2: #fff; --surface-3: #fff;
+    --text: #111; --text-soft: #222; --muted: #555;
+    --border: #ddd; --border-strong: #ccc;
+    --accent: #1a3fb8; --accent-ink: #1a3fb8;
+    --code-bg: #f5f5f5; --code-border: #ddd; --code-text: #111;
+  }
+  body { background: #fff; color: #111; }
+  body::before, .topbar, .sidebar, .mobile-toc, .doc-footer, .headerlink { display: none !important; }
+  .shell { display: block; max-width: none; padding: 0; }
+  .doc { padding: 0; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+  .doc::before { display: none; }
+  .doc-body .table-wrap { overflow: visible; }
+  .doc-body pre { background: #f5f5f5; color: #111; border-color: #ddd; box-shadow: none; }
+  .doc-body pre code { color: #111; }
+  .doc-body a { color: #1a3fb8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body class="page-readme">
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="README.html">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </span>
+      <span class="brand-copy"><strong>DRM &amp; TV Power</strong><small>Samsung UN40KU7000</small></span>
+    </a>
+    <nav class="topbar-nav" aria-label="Documents">
+      <a class="pill is-active" href="README.html" aria-current="page">README</a><a class="pill" href="ARCHITECTURE.html">Architecture</a><a class="pill ghost" href="README.md" aria-label="View README.md source">Markdown <span aria-hidden="true">&#8599;</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="page" id="content" tabindex="-1">
+  <div class="shell">
+    <div class="mobile-toc">
+      <details>
+        <summary>On this page</summary>
+        <nav class="toc" aria-label="Table of contents (mobile)"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li></ul></nav>
+      </details>
+    </div>
+
+    <aside class="sidebar">
+      <p class="side-label">Documentation</p>
+      <nav class="doc-switch" aria-label="Documents"><a class="switch is-active" href="README.html" aria-current="page"><span class="switch-kicker">README</span><span class="switch-title">Overview &amp; deployment</span><span class="switch-meta">Features &middot; configuration &middot; CLI</span></a><a class="switch" href="ARCHITECTURE.html"><span class="switch-kicker">Architecture</span><span class="switch-title">Internals &amp; event flow</span><span class="switch-meta">Topology &middot; state machine &middot; edge cases</span></a></nav>
+      <p class="side-label">On this page</p>
+      <nav class="toc" aria-label="Table of contents"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li></ul></nav>
+      <p class="side-foot">
+        Rendered from <a href="README.md">README.md</a><br>
+        Single-file HTML &middot; no external assets
+      </p>
+    </aside>
+
+    <article class="doc">
+      <div class="doc-body"><p class="eyebrow">Documentation &middot; README</p>
+<h1>DRM &amp; Samsung TV Power Management Suite</h1>
+<p>Automated power synchronization, dock/lid state tracking, hardware DPMS monitoring, and DRM capabilities analysis for a Samsung Tizen Smart TV (<code>UN40KU7000</code>, <code>4K60 UHD</code>) connected as an external monitor on Linux / KDE Plasma 6 (Wayland).</p>
+<blockquote>
+<p>For an in-depth technical explanation of the hardware topology, protocols, state machine, and edge-case mitigations, see <strong><a href="ARCHITECTURE.html">ARCHITECTURE.md</a></strong>.</p>
+</blockquote>
+<hr />
+<h2 id="full-feature-set">Full Feature Set<a class="headerlink" href="#full-feature-set" title="Link to this section">#</a></h2>
+<ol>
+<li>
+<p><strong>Real-Time Hardware DPMS Synchronization (<code>tv_power_daemon.py</code>)</strong>:</p>
+<ul>
+<li>Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked.</li>
+<li><strong>Screen Off</strong>: locks the session (<code>loginctl lock-session</code>) and then uses <strong>one</strong> power path — discrete HDMI-CEC <code>STANDBY</code> when docked, with WebSocket <code>KEY_POWER</code> only as a fallback if CEC fails. The two are never sent together, so a toggle can’t undo the standby.</li>
+<li><strong>Screen On</strong>: wakes the TV with multi-NIC Wake-on-LAN bursts and discrete HDMI-CEC (<code>IMAGE_VIEW_ON</code> + <code>ACTIVE_SOURCE</code>), then re-asserts the native mode via <code>kscreen-doctor output.&lt;connector&gt;.mode.&lt;TV_MODE&gt;</code> once the TV confirms it is awake.</li>
+<li><strong>Non-blocking event loop</strong>: every CEC/WoL/WebSocket/kscreen call runs in a worker thread. The GLib loop only reads sysfs and dispatches intents.</li>
+<li><strong>Startup reconciliation</strong>: a daemon start while the panel is already off commands the TV off; a start while the panel is on and docked wakes the TV if it is in standby.</li>
+</ul>
+</li>
+<li>
+<p><strong>Event-Driven Dock Hotplug &amp; Undock Wi-Fi Sleep</strong>:</p>
+<ul>
+<li><strong>Kernel Netlink UEvents</strong>: DRM hotplug and USB dock attach/detach are pushed into the GLib loop. Events are coalesced with a 400ms debounce because USB-C/PD renegotiation emits bursts.</li>
+<li><strong>Real fallback</strong>: if the netlink bind fails, the daemon polls external display state every 2s instead of silently losing hotplug detection.</li>
+<li><strong>Dock Plug-In (<code>disconnected -&gt; connected</code>)</strong>: clears wake backoff and runs the decisive wake sequence.</li>
+<li><strong>Dock Unplug (<code>connected -&gt; disconnected</code>)</strong>: cancels any in-flight wake, skips the now-dead CEC adapter, and retries WebSocket <code>KEY_POWER</code> over Wi-Fi across the NetworkManager route failover window.</li>
+</ul>
+</li>
+<li>
+<p><strong>Event-Driven Laptop Lid Synchronization</strong>:</p>
+<ul>
+<li>Listens on the System D-Bus for <code>PropertiesChanged</code> on <code>org.freedesktop.login1.Manager</code> (<code>LidClosed</code>); zero ACPI polling.</li>
+<li>Closing the lid creates a sleep intent. Opening it clears backoff and wakes the TV if the dock is connected.</li>
+</ul>
+</li>
+<li>
+<p><strong>Intent Model, Serialized CEC &amp; Exponential Backoff</strong>:</p>
+<ul>
+<li>Every ON/OFF request is a monotonically numbered intent with its own cancellation event. A new intent cancels the previous one, and workers check cancellation before each side effect — a slow sleep retry can no longer deliver <code>KEY_POWER</code> after a wake has started.</li>
+<li>HDMI-CEC access is serialized: only one <code>cec-ctl</code> process can touch <code>/dev/cec0</code> at a time, and a cancelled intent’s command is dropped inside that lock. Wake, standby and query are each a single <code>cec-ctl</code> invocation.</li>
+<li>The 5-second watchdog runs in a worker thread, probes TCP port <code>8001</code> (no forks while streaming), falls back to CEC when the port is closed, and requires two consecutive <code>offline</code> readings.</li>
+<li>Failed wakes back off exponentially (60s → 120s → … → 15min) instead of retrying every ~75s forever. A dock connect, DPMS-on, lid-open or unlock resets the backoff.</li>
+<li>12-second duplicate-off cooldown, shared by CEC and WebSocket paths.</li>
+</ul>
+</li>
+<li>
+<p><strong>Singleton Early-Boot Wake (<code>boot_wol.py</code> &amp; <code>tv-boot-wol.service</code>)</strong>:</p>
+<ul>
+<li>systemd oneshot (<code>RemainAfterExit=yes</code>) ordered after <code>network-online.target</code> and before <code>sddm.service</code>.</li>
+<li>Wakes the TV once per boot if the dock/display or home network is present and the panel is not in DPMS Off.</li>
+</ul>
+</li>
+<li>
+<p><strong>Manual CLI Control (<code>control_tv.py</code>) &amp; DRM Analyzer (<code>parse_drm_info.py</code>)</strong></p>
+<ul>
+<li><code>control_tv</code>: inspect display/CEC/screensaver/network status or manually trigger wake, standby, or WoL.</li>
+<li><code>parse_drm_info</code>: summarize GPU capabilities, CRTC pipes, planes, HDR metadata, and connector modes.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Link to this section">#</a></h2>
+<p>All scripts read the same environment variables (defaults match the original setup):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th style="text-align:left">Variable</th>
+<th style="text-align:left">Default</th>
+<th style="text-align:left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>TV_IP</code></td>
+<td style="text-align:left"><code>192.168.0.2</code></td>
+<td style="text-align:left">TV address</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>TV_MAC</code></td>
+<td style="text-align:left"><code>40:16:3b:d0:4f:8b</code></td>
+<td style="text-align:left">Wake-on-LAN target</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>CEC_DEVICE</code></td>
+<td style="text-align:left"><code>/dev/cec0</code></td>
+<td style="text-align:left">HDMI-CEC adapter</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>TV_MODE</code></td>
+<td style="text-align:left"><code>3840x2160@60</code></td>
+<td style="text-align:left">Mode re-asserted via <code>kscreen-doctor</code></td>
+</tr>
+<tr>
+<td style="text-align:left"><code>TV_LOG_LEVEL</code></td>
+<td style="text-align:left"><code>INFO</code></td>
+<td style="text-align:left">Logging level (<code>DEBUG</code> is useful for CEC failures)</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>TV_PYTHON</code></td>
+<td style="text-align:left">repo <code>venv/bin/python</code></td>
+<td style="text-align:left">Interpreter substituted into the systemd unit by <code>deploy.sh</code></td>
+</tr>
+<tr>
+<td style="text-align:left"><code>TV_TOKEN_FILE</code></td>
+<td style="text-align:left"><code>~/.local/state/drmstuff/tv_token.txt</code></td>
+<td style="text-align:left">Pairing token path</td>
+</tr>
+</tbody>
+</table></div>
+<p>Override persistent values in the systemd unit (for example
+<code>systemctl --user edit tv-power-sync.service</code>), not in the scripts.</p>
+<hr />
+<h2 id="directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance<a class="headerlink" href="#directory-structure-xdg-compliance" title="Link to this section">#</a></h2>
+<ul>
+<li><strong>Source Repository</strong>: <code>~/src/drmstuff/</code></li>
+<li><strong>Shared Helpers</strong>: <code>tvlib.py</code> (config, logging, WoL, CEC, sysfs, backoff)</li>
+<li><strong>User Executables</strong>: <code>~/.local/bin/</code> (<code>control_tv</code>, <code>tv_power_daemon</code>, <code>boot_wol</code>, <code>parse_drm_info</code>, <code>pair_samsung_tv</code>, <code>tvlib.py</code>)</li>
+<li><strong>Systemd User Service</strong>: <code>~/.config/systemd/user/tv-power-sync.service</code></li>
+<li><strong>Systemd Boot Service</strong>: <code>/etc/systemd/system/tv-boot-wol.service</code></li>
+<li><strong>HDMI-CEC Udev Rule</strong>: <code>/etc/udev/rules.d/70-cec-uaccess.rules</code></li>
+</ul>
+<hr />
+<h2 id="deployment">Deployment<a class="headerlink" href="#deployment" title="Link to this section">#</a></h2>
+<p>The daemon needs <code>dbus</code> and <code>gi</code> (system packages) plus <code>samsungtvws</code> (pip). The
+recommended layout is a venv that can still see the system bindings:</p>
+<pre><code class="language-bash">python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>--system-site-packages<span class="w"> </span>venv
+./venv/bin/pip<span class="w"> </span>install<span class="w"> </span>samsungtvws
+./deploy.sh
+</code></pre>
+<p><code>deploy.sh</code> installs <code>tvlib.py</code> alongside the scripts, selects an interpreter
+that can import <code>dbus</code> and <code>gi</code> (<code>TV_PYTHON</code> overrides it), substitutes it into
+<code>tv-power-sync.service</code>, rewrites the installed shebangs to it, and restarts the
+user service. If an existing venv cannot see <code>dbus</code>/<code>gi</code>, the script adds a
+version-matched <code>000-system-bindings.pth</code> to that venv (equivalent to
+<code>--system-site-packages</code>) instead of re-creating it. It fails with an explicit
+message if no interpreter can provide the system bindings, and warns if
+<code>samsungtvws</code> is missing (Wi-Fi control disabled).</p>
+<hr />
+<h2 id="cli-usage">CLI Usage<a class="headerlink" href="#cli-usage" title="Link to this section">#</a></h2>
+<pre><code class="language-bash">control_tv<span class="w"> </span>status<span class="w">    </span><span class="c1"># KDE DPMS, CEC power state, D-Bus lock state, TV port 8001</span>
+control_tv<span class="w"> </span>wake<span class="w">      </span><span class="c1"># Decisive wake (5x WoL + CEC HDMI 1 + mode sync)</span>
+control_tv<span class="w"> </span>standby<span class="w">   </span><span class="c1"># DPMS off + CEC standby (Wi-Fi toggle only if CEC fails)</span>
+control_tv<span class="w"> </span>wol<span class="w">       </span><span class="c1"># Broadcast multi-NIC Wake-on-LAN magic packets only</span>
+
+parse_drm_info<span class="w">       </span><span class="c1"># Summarize DRM GPU pipes, planes, and connector capabilities</span>
+</code></pre>
+<hr />
+<h2 id="caveats">Caveats<a class="headerlink" href="#caveats" title="Link to this section">#</a></h2>
+<ul>
+<li>The watchdog’s TCP fallback assumes the TV closes port <code>8001</code> in standby. If a
+firmware update keeps it open, CEC remains the authoritative state source (the
+daemon queries CEC when the port is closed, and reports <code>on</code> otherwise).</li>
+<li>A system suspend can begin before the asynchronous sleep worker finishes. The
+daemon still issues the command as early as possible, but logind does not wait
+for <code>PrepareForSleep</code> handlers.</li>
+</ul>
+</div>
+      <footer class="doc-footer">
+        <p class="foot-note">Converted from <a href="README.md">README.md</a> &middot; 31 Oct 2026</p>
+        <a class="next-card" href="ARCHITECTURE.html"><span class="next-kicker">Read next</span><span class="next-title">Architecture &amp; technical reference</span><span class="next-meta">Topology, protocols, state machine, edge cases</span></a>
+      </footer>
+    </article>
+  </div>
+</main>
+</body>
+</html>
