@@ -44,6 +44,7 @@ log = logging.getLogger("tv.daemon")
 NETLINK_KOBJECT_UEVENT = getattr(socket, "NETLINK_KOBJECT_UEVENT", 15)
 DISPLAY_DEBOUNCE_MS = 400
 FALLBACK_POLL_SECONDS = 2.0
+SETTLE_SECONDS = 3.0
 
 
 class Intent:
@@ -512,6 +513,12 @@ class TVPowerSyncDaemon:
         self._active_intent = intent
         return intent
 
+    def _finish_intent(self, intent: Intent) -> None:
+        """Clear a completed intent so it cannot suppress future requests."""
+        with self._intent_lock:
+            if self._active_intent is intent:
+                self._active_intent = None
+
     def _mark_commanded_off(self) -> None:
         with self._state_lock:
             self._commanded_off = True
@@ -555,7 +562,10 @@ class TVPowerSyncDaemon:
                 and active.kind == "on"
                 and not active.cancel.is_set()
             ):
-                log.debug("Wake already running; ignoring duplicate trigger (%s)", reason)
+                log.info(
+                    "[*] Wake already in progress; ignoring duplicate trigger (%s).",
+                    reason,
+                )
                 return
             if not self.backoff.ready():
                 log.info(
@@ -666,6 +676,8 @@ class TVPowerSyncDaemon:
             )
         except Exception:
             log.exception("Error while sending TV sleep command (%s)", reason)
+        finally:
+            self._finish_intent(intent)
 
     # ------------------------------------------------------------------
     # Wake path
@@ -673,24 +685,28 @@ class TVPowerSyncDaemon:
 
     def _wake_worker(self, intent: Intent, reason: str) -> None:
         try:
-            succeeded = self._do_decisive_wake(intent, reason)
-        except Exception:
-            log.exception("Error during decisive wake")
-            succeeded = False
+            try:
+                succeeded = self._do_decisive_wake(intent, reason)
+            except Exception:
+                log.exception("Error during decisive wake")
+                succeeded = False
 
-        with self._intent_lock:
-            is_current = self._active_intent is intent
-        if not is_current or intent.cancel.is_set():
-            log.debug("Wake intent %d superseded; not applying backoff", intent.seq)
-            return
+            with self._intent_lock:
+                is_current = self._active_intent is intent
+            if not is_current or intent.cancel.is_set():
+                log.debug("Wake intent %d superseded; not applying backoff", intent.seq)
+                return
 
-        if succeeded:
-            self.backoff.reset()
-        else:
-            delay = self.backoff.fail()
-            log.warning(
-                "[!] Wake failed; next automatic attempt in %ds.", int(delay)
-            )
+            if succeeded:
+                self.backoff.reset()
+                log.info("[*] Wake sequence completed successfully.")
+            else:
+                delay = self.backoff.fail()
+                log.warning(
+                    "[!] Wake failed; next automatic attempt in %ds.", int(delay)
+                )
+        finally:
+            self._finish_intent(intent)
 
     def _do_decisive_wake(self, intent: Intent, reason: str) -> bool:
         cancel = intent.cancel
@@ -703,10 +719,13 @@ class TVPowerSyncDaemon:
 
         log.info("--> [DECISIVE WAKE] (%s)", reason)
 
-        # Respect the TV's shutdown settling window.
+        # Respect the TV's shutdown settling window. A reported "on" is not
+        # trustworthy while Tizen is still shutting down (port 8001 can linger
+        # for several seconds), so a recent off forces the full wake sequence.
         elapsed = self._recent_off_elapsed()
-        if elapsed is not None and elapsed < 3.0:
-            wait_time = 3.0 - elapsed
+        recent_off = elapsed is not None and elapsed < SETTLE_SECONDS
+        if recent_off:
+            wait_time = SETTLE_SECONDS - elapsed
             log.info(
                 "[*] Wake requested %.2fs after sleep. Waiting %.2fs for TV "
                 "shutdown cycle...",
@@ -724,19 +743,28 @@ class TVPowerSyncDaemon:
         self.ensure_dpms_on()
         ext_conn = tvlib.external_connector_name()
 
-        tv_state = tvlib.get_tv_power_state(
-            self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
-        )
-        if cancel.is_set():
-            return False
-        if tv_state in ("on", "to-on"):
+        if recent_off:
+            # We already know the TV was commanded off; skip the pre-wake CEC
+            # query and start the discrete wake immediately.
             log.info(
-                "[*] TV is already '%s'. Re-asserting HDMI active source and "
-                "display mode...",
-                tv_state,
+                "[*] TV was commanded off %.1fs ago; starting the full wake "
+                "sequence.",
+                elapsed,
             )
-            self._assert_video(ext_conn, cancel)
-            return True
+        else:
+            tv_state = tvlib.get_tv_power_state(
+                self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
+            )
+            if cancel.is_set():
+                return False
+            if tv_state in ("on", "to-on"):
+                log.info(
+                    "[*] TV is already '%s'. Re-asserting HDMI active source "
+                    "and display mode...",
+                    tv_state,
+                )
+                self._assert_video(ext_conn, cancel)
+                return True
 
         log.info("Broadcasting rapid Wake-on-LAN burst (5 packets) across all NICs...")
         tvlib.send_wol(
@@ -749,12 +777,17 @@ class TVPowerSyncDaemon:
         if cancel.is_set():
             return False
 
-        self.cec.wake(cancel)
+        if not self.cec.wake(cancel):
+            log.warning(
+                "CEC wake command did not succeed; continuing with verification."
+            )
         if cancel.is_set():
             return False
 
         for attempt in range(1, 11):
-            if cancel.wait(1.5):
+            # Poll quickly at first (Tizen boots in a few seconds), then relax.
+            wait_time = 0.75 if attempt <= 4 else 1.5
+            if cancel.wait(wait_time):
                 log.info("[*] Wake cancelled during verification loop.")
                 return False
             if self.read_external_display_status() != "connected":
@@ -763,7 +796,13 @@ class TVPowerSyncDaemon:
 
             log.info("Wake attempt %d/10: waiting for TV...", attempt)
             current_state = tvlib.get_tv_power_state(
-                self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
+                self.cec,
+                self.config.tv_ip,
+                use_cec=True,
+                cancel=cancel,
+                # The discrete wake has already been sent; the TCP probe is a
+                # valid fast confirmation at this point.
+                allow_network_fallback=True,
             )
             if cancel.is_set():
                 return False
@@ -786,7 +825,11 @@ class TVPowerSyncDaemon:
             )
             if cancel.is_set():
                 return False
-            self.cec.wake(cancel)
+            # Re-sending the full CEC wake blocks this loop for ~3s; the TV
+            # usually needs only the initial command, so retry every third
+            # attempt and keep polling in between.
+            if attempt % 3 == 0 and not self.cec.wake(cancel):
+                log.debug("CEC wake retry %d did not succeed.", attempt)
 
         log.warning("[!] Decisive wake did not detect the TV awake after 10 attempts.")
         return False
@@ -807,7 +850,8 @@ class TVPowerSyncDaemon:
                 "No active external connector found; skipping kscreen-doctor "
                 "mode re-assert."
             )
-        self.cec.wake(cancel)
+        if not self.cec.wake(cancel):
+            log.warning("CEC wake/active-source command did not succeed.")
 
     def ensure_dpms_on(self) -> None:
         current = self.read_hardware_dpms()

@@ -160,7 +160,10 @@ lid open) and the watchdog.
 1. **Cancellation / connection guard** — abort if the intent was superseded or
    the external display is disconnected.
 2. **Settle window** — if the TV was commanded off less than 3s ago, wait out
-   the remainder. The wait is interruptible by a new intent.
+   the remainder. The wait is interruptible by a new intent. A reported `on`
+   during this window is ignored (Tizen can keep port 8001 open while shutting
+   down): the pre-wake CEC query is skipped and the full WoL + CEC sequence runs
+   immediately after the settle.
 3. **Clear the off cooldown**, then ensure KDE DPMS is on *only if the panel is
    currently off* (avoids spawning a Qt process on every wake).
 4. **Fast path** — query CEC. If already `on`/`to-on`, re-assert the video mode
@@ -168,9 +171,11 @@ lid open) and the watchdog.
 5. **Wake** — 5 WoL bursts (one `ip` enumeration cached for the whole sequence)
    plus a single `cec-ctl --playback --to 0 --image-view-on --active-source`
    invocation.
-6. **Verification loop** — up to 10 attempts, 1.5s apart, re-sending WoL and the
-   discrete CEC command. The loop exits immediately if the intent is cancelled
-   or the dock is unplugged.
+6. **Verification loop** — up to 10 attempts, polling TCP every 0.75s for the
+   first four attempts and every 1.5s afterwards. WoL is re-sent each round; the
+   blocking CEC wake is repeated only every third round so it does not delay the
+   polls. The loop exits immediately if the intent is cancelled or the dock is
+   unplugged.
 7. **Video mode re-assert** — `kscreen-doctor output.<connector>.mode.<TV_MODE>`.
    Using the mode string rather than a positional index survives mode-table
    changes.

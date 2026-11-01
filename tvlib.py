@@ -263,7 +263,7 @@ class CecController:
         self,
         device: str = DEFAULT_CEC_DEVICE,
         query_timeout: float = 1.0,
-        action_timeout: float = 2.0,
+        action_timeout: float = 4.0,
     ) -> None:
         self.device = device
         self.query_timeout = query_timeout
@@ -342,10 +342,14 @@ def get_tv_power_state(
     tv_ip: str,
     use_cec: bool = True,
     cancel: Optional[threading.Event] = None,
+    allow_network_fallback: bool = True,
 ) -> str:
     """Return 'on', 'standby', 'to-on', 'to-standby' or 'offline'.
 
     CEC is authoritative when it answers; the TCP probe is only a fallback.
+    Set allow_network_fallback=False for a short window after commanding the
+    TV off: Tizen can keep port 8001 open while shutting down, which would
+    otherwise look like a healthy "on" state.
     """
     if use_cec and cec is not None:
         state = cec.power_state(cancel)
@@ -353,7 +357,7 @@ def get_tv_power_state(
             return state
     if cancel is not None and cancel.is_set():
         return "offline"
-    if is_tv_network_awake(tv_ip, timeout=0.4):
+    if allow_network_fallback and is_tv_network_awake(tv_ip, timeout=0.4):
         return "on"
     return "offline"
 
