@@ -45,6 +45,9 @@ NETLINK_KOBJECT_UEVENT = getattr(socket, "NETLINK_KOBJECT_UEVENT", 15)
 DISPLAY_DEBOUNCE_MS = 400
 FALLBACK_POLL_SECONDS = 2.0
 SETTLE_SECONDS = 3.0
+# Tizen can keep reporting/streaming states for a long time after a standby
+# command. During this guard, never take the "already on" fast path.
+OFF_GUARD_SECONDS = 30.0
 
 
 class Intent:
@@ -156,6 +159,13 @@ class TVPowerSyncDaemon:
                     return
                 tv_state = tvlib.get_tv_power_state(self.cec, self.config.tv_ip)
                 log.info("Initial TV power state: %s", tv_state)
+                if tv_state in ("on", "to-on") and not tvlib.external_edid_present():
+                    log.warning(
+                        "TV reports '%s' at startup but the external display "
+                        "has no EDID; treating it as not ready.",
+                        tv_state,
+                    )
+                    tv_state = "offline"
                 if tv_state in ("standby", "to-standby", "offline"):
                     log.info(
                         "[*] Laptop is ON and dock is connected, but TV is not awake "
@@ -447,7 +457,12 @@ class TVPowerSyncDaemon:
 
     def _watchdog_worker(self) -> None:
         try:
-            if tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.2):
+            # TCP alone is not enough: port 8001 can stay open while the TV is
+            # shutting down or while its HDMI input has no EDID.
+            if (
+                tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.2)
+                and tvlib.external_edid_present()
+            ):
                 self._set_offline_streak(0)
                 return
             if self.read_external_display_status() != "connected":
@@ -461,6 +476,13 @@ class TVPowerSyncDaemon:
             if self.read_external_display_status() != "connected":
                 self._set_offline_streak(0)
                 return
+            if tv_state in ("on", "to-on") and not tvlib.external_edid_present():
+                log.warning(
+                    "[!] Watchdog: TV reports '%s' but the external display has "
+                    "no EDID; treating it as offline.",
+                    tv_state,
+                )
+                tv_state = "offline"
 
             if tv_state in ("standby", "to-standby"):
                 log.warning(
@@ -725,8 +747,8 @@ class TVPowerSyncDaemon:
         # trustworthy while Tizen is still shutting down (port 8001 can linger
         # for several seconds), so a recent off forces the full wake sequence.
         elapsed = self._recent_off_elapsed()
-        recent_off = elapsed is not None and elapsed < SETTLE_SECONDS
-        if recent_off:
+        recent_off = elapsed is not None and elapsed < OFF_GUARD_SECONDS
+        if elapsed is not None and elapsed < SETTLE_SECONDS:
             wait_time = SETTLE_SECONDS - elapsed
             log.info(
                 "[*] Wake requested %.2fs after sleep. Waiting %.2fs for TV "
@@ -760,13 +782,19 @@ class TVPowerSyncDaemon:
             if cancel.is_set():
                 return False
             if tv_state in ("on", "to-on"):
-                log.info(
-                    "[*] TV is already '%s'. Re-asserting HDMI active source "
-                    "and display mode...",
+                if tvlib.external_edid_present():
+                    log.info(
+                        "[*] TV is already '%s' with EDID present. "
+                        "Re-asserting HDMI active source and display mode...",
+                        tv_state,
+                    )
+                    self._assert_video(ext_conn, cancel)
+                    return True
+                log.warning(
+                    "TV reports '%s' but the external display has no EDID; "
+                    "treating it as not ready and running the full wake sequence.",
                     tv_state,
                 )
-                self._assert_video(ext_conn, cancel)
-                return True
 
         log.info("Broadcasting rapid Wake-on-LAN burst (5 packets) across all NICs...")
         tvlib.send_wol(
@@ -802,21 +830,33 @@ class TVPowerSyncDaemon:
                 self.config.tv_ip,
                 use_cec=True,
                 cancel=cancel,
-                # The discrete wake has already been sent; the TCP probe is a
-                # valid fast confirmation at this point.
-                allow_network_fallback=True,
+                # TCP alone is not proof of a usable display: Tizen can keep
+                # port 8001 open in standby or while the HDMI input is idle.
+                allow_network_fallback=False,
             )
             if cancel.is_set():
                 return False
-            if current_state in ("on", "to-on"):
+            edid_ready = tvlib.external_edid_present()
+            network_ready = tvlib.is_tv_network_awake(
+                self.config.tv_ip, timeout=0.4
+            )
+            if edid_ready and (
+                current_state in ("on", "to-on") or network_ready
+            ):
                 log.info(
-                    "[*] TV confirmed awake (%s) on attempt %d. Syncing video "
-                    "stream and active source...",
-                    current_state,
+                    "[*] TV confirmed awake (%s) on attempt %d with EDID. "
+                    "Syncing video stream and active source...",
+                    current_state if current_state in ("on", "to-on") else "on",
                     attempt,
                 )
                 self._assert_video(ext_conn, cancel)
                 return True
+            if current_state in ("on", "to-on") and not edid_ready:
+                log.info(
+                    "TV reports '%s' but no EDID yet; waiting for the HDMI "
+                    "stream...",
+                    current_state,
+                )
 
             tvlib.send_wol(
                 self.config.tv_mac,

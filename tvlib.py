@@ -508,6 +508,35 @@ def external_connector_name() -> Optional[str]:
     return None
 
 
+def external_edid_present() -> bool:
+    """True when a connected DP/HDMI connector exposes a non-empty EDID.
+
+    A TCP-only "on" is not enough to know the TV is usable: Tizen can keep
+    port 8001 open while shutting down, and a TV on another input may not
+    expose EDID to the GPU. This is the cheapest cross-check.
+    """
+    for status_path in sorted(
+        glob.glob("/sys/class/drm/*-DP-*/status")
+        + glob.glob("/sys/class/drm/*-HDMI-*/status")
+    ):
+        try:
+            with open(status_path, "r") as handle:
+                if handle.read().strip() != "connected":
+                    continue
+        except OSError:
+            continue
+        edid_path = os.path.join(os.path.dirname(status_path), "edid")
+        try:
+            # sysfs attributes report st_size 0 even when they have content,
+            # so probe by reading one byte instead of using getsize().
+            with open(edid_path, "rb") as handle:
+                if handle.read(1):
+                    return True
+        except OSError:
+            pass
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Wake retry backoff
 # ---------------------------------------------------------------------------
