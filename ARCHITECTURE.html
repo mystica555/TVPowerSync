@@ -97,6 +97,7 @@ a:hover { color: var(--accent-ink); }
   position: sticky; top: 0; z-index: 100;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  will-change: transform;
 }
 .topbar-inner {
   max-width: 1200px; margin: 0 auto;
@@ -138,11 +139,13 @@ a:hover { color: var(--accent-ink); }
   align-items: start;
 }
 .sidebar {
-  position: sticky; top: 84px;
-  max-height: calc(100vh - 104px);
+  position: fixed; top: 90px;
+  left: max(28px, calc(50% - 600px + 28px));
+  width: 248px;
+  max-height: calc(100vh - 110px);
   overflow: auto; padding: 4px 2px 20px;
   scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
-  /* Keep the sticky column on one compositor layer so its text cannot shimmer. */
+  /* Fixed positioning avoids per-frame sticky repositioning while scrolling. */
   will-change: transform;
 }
 .sidebar::-webkit-scrollbar { width: 6px; }
@@ -210,6 +213,7 @@ a:hover { color: var(--accent-ink); }
 /* Page card */
 .doc {
   position: relative; min-width: 0; overflow: hidden;
+  grid-column: 2;
   padding: clamp(24px, 4.4vw, 52px);
   background: var(--surface);
   border: 1px solid var(--border); border-radius: 22px;
@@ -419,6 +423,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
   .shell { grid-template-columns: minmax(0, 1fr); max-width: 900px; }
   .sidebar { display: none; }
   .mobile-toc { display: block; }
+  .doc { grid-column: 1; }
 }
 @media (max-width: 640px) {
   .brand-copy small { display: none; }
