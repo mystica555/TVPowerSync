@@ -98,12 +98,6 @@ a:hover { color: var(--accent-ink); }
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
-@supports (backdrop-filter: blur(12px)) {
-  .topbar {
-    background: color-mix(in srgb, var(--bg) 78%, transparent);
-    backdrop-filter: blur(14px) saturate(150%);
-  }
-}
 .topbar-inner {
   max-width: 1200px; margin: 0 auto;
   padding: 10px clamp(16px, 3vw, 28px);
@@ -148,6 +142,8 @@ a:hover { color: var(--accent-ink); }
   max-height: calc(100vh - 104px);
   overflow: auto; padding: 4px 2px 20px;
   scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  /* Keep the sticky column on one compositor layer so its text cannot shimmer. */
+  will-change: transform;
 }
 .sidebar::-webkit-scrollbar { width: 6px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
