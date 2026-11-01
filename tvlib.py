@@ -15,12 +15,14 @@ Configuration is read from the environment (all optional):
 
 from __future__ import annotations
 
+import fcntl
 import glob
 import ipaddress
 import logging
 import os
 import re
 import socket
+import struct
 import subprocess
 import sys
 import threading
@@ -113,14 +115,65 @@ class Config:
 _iface_lock = threading.Lock()
 _iface_cache: list[tuple[str, Optional[str]]] = []
 _iface_cache_at = 0.0
-_IFACE_CACHE_TTL = 30.0
+# The interface set rarely changes outside a dock transition, and enumerating
+# while the dock is re-enumerating can block on the kernel's rtnl lock. Keep a
+# last-known-good set long enough that a wake never has to refresh mid-transition.
+_IFACE_CACHE_TTL = 300.0
+
+_SIOCGIFADDR = 0x8915
+_SIOCGIFBRDADDR = 0x8919
+_SIOCGIFFLAGS = 0x8913
+_IFF_UP = 0x1
+
+
+def _enumerate_ipv4_interfaces() -> list[tuple[str, Optional[str]]]:
+    """Enumerate IPv4 addresses with ioctl; no subprocess, no rtnl stalls.
+
+    A forked `ip` process can block in the kernel for several seconds while a
+    USB-C dock re-enumerates. That delay lands directly in the WoL/wake path,
+    so addresses are read straight from the kernel instead.
+    """
+    result: list[tuple[str, Optional[str]]] = []
+    try:
+        interfaces = socket.if_nameindex()
+    except OSError as exc:
+        log.debug("if_nameindex failed: %s", exc)
+        return result
+
+    for _index, name in interfaces:
+        if name == "lo":
+            continue
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                ifreq = struct.pack("256s", name.encode()[:15])
+                flags = struct.unpack(
+                    "H", fcntl.ioctl(sock.fileno(), _SIOCGIFFLAGS, ifreq)[16:18]
+                )[0]
+                if not flags & _IFF_UP:
+                    continue
+                address = socket.inet_ntoa(
+                    fcntl.ioctl(sock.fileno(), _SIOCGIFADDR, ifreq)[20:24]
+                )
+                try:
+                    broadcast = socket.inet_ntoa(
+                        fcntl.ioctl(sock.fileno(), _SIOCGIFBRDADDR, ifreq)[20:24]
+                    )
+                    if broadcast == "0.0.0.0":  # point-to-point, no broadcast
+                        broadcast = None
+                except OSError:
+                    broadcast = None
+                result.append((address, broadcast))
+        except OSError:
+            continue
+    return result
 
 
 def local_ipv4_interfaces(force: bool = False) -> list[tuple[str, Optional[str]]]:
     """Return (address, broadcast) pairs for non-loopback IPv4 interfaces.
 
-    Cached briefly: a wake sequence sends several bursts, and forking `ip`
-    for each one is pure overhead.
+    A 30s cache keeps a wake sequence from re-enumerating on every WoL burst;
+    an empty result never replaces the last known good set, because a dock
+    transition briefly removes every address from the table.
     """
     global _iface_cache, _iface_cache_at
     now = time.monotonic()
@@ -128,29 +181,17 @@ def local_ipv4_interfaces(force: bool = False) -> list[tuple[str, Optional[str]]
         if not force and _iface_cache and now - _iface_cache_at < _IFACE_CACHE_TTL:
             return list(_iface_cache)
 
-    result: list[tuple[str, Optional[str]]] = []
-    try:
-        proc = subprocess.run(
-            ["ip", "-o", "-4", "addr", "show"],
-            capture_output=True,
-            text=True,
-            timeout=2.0,
-        )
-        for line in proc.stdout.splitlines():
-            parts = line.split()
-            if "inet" not in parts:
-                continue
-            ip_addr = parts[parts.index("inet") + 1].split("/")[0]
-            if ip_addr.startswith("127."):
-                continue
-            brd = parts[parts.index("brd") + 1] if "brd" in parts else None
-            result.append((ip_addr, brd))
-    except (OSError, subprocess.SubprocessError) as exc:
-        log.debug("Could not enumerate interfaces: %s", exc)
-
+    result = _enumerate_ipv4_interfaces()
     with _iface_lock:
-        _iface_cache = result
-        _iface_cache_at = time.monotonic()
+        if result:
+            _iface_cache = result
+            _iface_cache_at = time.monotonic()
+        elif _iface_cache:
+            log.debug("Interface enumeration empty; using the last known good set")
+            return list(_iface_cache)
+        else:
+            _iface_cache = []
+            _iface_cache_at = time.monotonic()
     return list(result)
 
 

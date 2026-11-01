@@ -639,7 +639,7 @@ class TVPowerSyncDaemon:
                     return
                 log.warning("Falling back to Wi-Fi WebSocket for TV standby.")
 
-            attempts = 10 if undock else 4
+            attempts = 20 if undock else 4
             for attempt in range(1, attempts + 1):
                 if cancel.is_set():
                     return
@@ -649,11 +649,13 @@ class TVPowerSyncDaemon:
                         "aborting sleep."
                     )
                     return
-                if tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.6):
+                # A short probe keeps failed attempts cheap while Wi-Fi route
+                # failover settles; a reachable LAN answers in under a few ms.
+                if tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.25):
                     if tvlib.send_key(
                         self.config.tv_ip,
                         "KEY_POWER",
-                        timeout=3.0,
+                        timeout=2.5,
                         cancel=cancel,
                     ):
                         self._mark_commanded_off()
@@ -665,7 +667,7 @@ class TVPowerSyncDaemon:
                             reason,
                         )
                         return
-                if attempt < attempts and cancel.wait(0.5):
+                if attempt < attempts and cancel.wait(0.25):
                     return
 
             log.info(

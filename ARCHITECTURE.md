@@ -198,9 +198,11 @@ Triggered by DPMS off, lid close, dock unplug and suspend.
    both unconditionally, so the toggle could wake a TV the standby had just
    turned off.
 5. **Undock retry** — after the dock is removed, CEC is gone and NetworkManager
-   is failing over from the dock NIC to Wi-Fi. The worker retries the WebSocket
-   toggle for up to 10 × 0.5s, aborting if the dock returns or the intent is
-   cancelled.
+   is failing over from the dock NIC to Wi-Fi. The worker probes reachability
+   with a 0.25s TCP timeout and retries every 0.25s for up to 20 attempts
+   (~10s), aborting if the dock returns or the intent is cancelled. Wake-on-LAN
+   interface discovery uses ioctl rather than a forked `ip` process, so a dock
+   re-enumeration cannot stall the wake path for seconds.
 
 ### 3.3 Screen Off / Lock
 
