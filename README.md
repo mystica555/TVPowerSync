@@ -1,4 +1,4 @@
-# DRM & Samsung TV Power Management Suite
+# TizenPowerSync
 
 Automated power synchronization, dock/lid state tracking, hardware DPMS monitoring, and DRM capabilities analysis for a Samsung Tizen Smart TV (`UN40KU7000`, `4K60 UHD`) connected as an external monitor on Linux / KDE Plasma 6 (Wayland).
 

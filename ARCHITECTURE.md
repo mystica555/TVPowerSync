@@ -1,8 +1,7 @@
 # Detailed Architecture & Technical Reference
 
 This document explains the hardware topology, protocols, event sources, state
-machine and edge-case mitigations of the **DRM & Samsung TV Power Management
-Suite**.
+machine and edge-case mitigations of **TizenPowerSync**.
 
 ---
 
