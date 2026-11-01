@@ -126,7 +126,9 @@ only as a fallback. All commands use list-form `subprocess` calls (no shell).
 ### 2.4 `parse_drm_info.py`
 
 Formats `drm_info -j` output: driver/caps, connectors and EDID, bpc/HDR
-metadata, CRTC timings, and plane usage.
+metadata, CRTC timings, and plane usage. It reads `argv[1]` when given, otherwise
+`TV_DRM_INFO` (default `drm_info.json` in the working directory) and falls back
+to running `drm_info -j` when the file is missing.
 
 ### 2.5 `pair_samsung_tv.py`
 
@@ -281,14 +283,18 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 | `CEC_DEVICE` | `/dev/cec0` | daemon, CLI, boot |
 | `TV_MODE` | `3840x2160@60` | mode re-assert |
 | `TV_LOG_LEVEL` | `INFO` | all scripts |
-| `TV_PYTHON` | repo `venv/bin/python` | `deploy.sh` unit substitution |
+| `TV_PYTHON` | `$XDG_DATA_HOME/tizenpowersync/venv/bin/python` | `deploy.sh` interpreter override |
 | `TV_TOKEN_FILE` | `~/.local/state/tizenpowersync/tv_token.txt` | pairing helper |
+| `TV_DRM_INFO` | `drm_info.json` (cwd) | `parse_drm_info` snapshot |
 
-[`deploy.sh`](README.md#deployment) creates `venv/` with `--system-site-packages`
-when no usable venv is present, installs `samsungtvws`, and prefers that
-interpreter (`TV_PYTHON` overrides it). If an existing venv cannot see the system
-bindings it writes a version-matched `000-system-bindings.pth` into the venv (the
-same effect as the flag) rather than re-creating it. It substitutes the selected
-interpreter into `ExecStart=@PYTHON@ ...`, rewrites the installed script shebangs
-to match, fails if no interpreter can import `dbus`/`gi`, and warns if
+[`deploy.sh`](README.md#deployment) keeps the venv outside the clone, at
+`$XDG_DATA_HOME/tizenpowersync/venv` (default
+`~/.local/share/tizenpowersync/venv`), so the checkout can be moved or deleted
+after deployment. When the venv is missing the script creates it with
+`--system-site-packages` and installs `samsungtvws`; `TV_PYTHON` overrides the
+interpreter. If an existing venv cannot see the system bindings it writes a
+version-matched `000-system-bindings.pth` into the venv (the same effect as the
+flag) rather than re-creating it. It substitutes the selected interpreter into
+the user and boot units (`@PYTHON@`, `@BIN_DIR@`), rewrites the installed script
+shebangs to match, fails if no interpreter can import `dbus`/`gi`, and warns if
 `samsungtvws` is missing.

@@ -4,14 +4,19 @@ set -euo pipefail
 # XDG Base Directory specification compliance
 XDG_BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 SYSTEMD_USER_DIR="$XDG_CONFIG_HOME/systemd/user"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="$REPO_DIR/venv"
+# The venv lives in the user's data directory, not in the clone, so the
+# installation survives moving or deleting the checkout.
+APP_DATA_DIR="$XDG_DATA_HOME/tizenpowersync"
+VENV_DIR="$APP_DATA_DIR/venv"
 
 echo "=== Deploying TizenPowerSync (XDG Compliant) ==="
 echo "Target Bin Dir     : $XDG_BIN_HOME"
 echo "Target Config Dir  : $XDG_CONFIG_HOME"
+echo "Target Data Dir    : $APP_DATA_DIR"
 echo "Systemd User Dir   : $SYSTEMD_USER_DIR"
 echo "Virtualenv         : $VENV_DIR"
 
@@ -93,6 +98,7 @@ ensure_samsungtvws() {
 
 create_venv() {
     local target="$1" system_py="$2"
+    mkdir -p "$(dirname "$target")"
     echo "  Creating venv at $target (with system site packages)..."
     if ! "$system_py" -m venv --system-site-packages "$target"; then
         echo "  Error: could not create $target with $system_py." >&2
@@ -103,18 +109,16 @@ create_venv() {
 }
 
 PYTHON_BIN="${TV_PYTHON:-}"
-if [[ -z "$PYTHON_BIN" ]]; then
-    for candidate in "$VENV_DIR/bin/python" "$REPO_DIR/.venv/bin/python"; do
-        [[ -x "$candidate" ]] || continue
-        if repair_system_bindings "$candidate"; then
-            PYTHON_BIN="$candidate"
-            break
-        fi
-        echo "  Skipping $candidate: missing dbus/gi and unable to borrow system bindings."
-    done
+if [[ -z "$PYTHON_BIN" && -x "$VENV_DIR/bin/python" ]]; then
+    if repair_system_bindings "$VENV_DIR/bin/python"; then
+        PYTHON_BIN="$VENV_DIR/bin/python"
+    else
+        echo "  Skipping $VENV_DIR/bin/python: missing dbus/gi and unable to borrow system bindings."
+    fi
 fi
 
-# No usable venv yet: build one that can still see the system bindings.
+# No usable venv yet: build one in the data directory, borrowing the system
+# bindings through --system-site-packages.
 if [[ -z "$PYTHON_BIN" ]]; then
     SYSTEM_PY="$(find_system_python || true)"
     if [[ -z "$SYSTEM_PY" ]]; then
@@ -138,9 +142,9 @@ if [[ -z "$PYTHON_BIN" || ! -x "$PYTHON_BIN" ]]; then
     exit 1
 fi
 
-# An existing repo venv is reused, but still gets the pip dependency.
+# The managed venv is reused, but still gets the pip dependency.
 case "$PYTHON_BIN" in
-    "$VENV_DIR/bin/python"|"$REPO_DIR/.venv/bin/python") ensure_samsungtvws "$PYTHON_BIN" ;;
+    "$VENV_DIR/bin/python") ensure_samsungtvws "$PYTHON_BIN" ;;
 esac
 
 # Make the path absolute without resolving the venv's python symlink (resolving
@@ -189,7 +193,13 @@ echo "  User service tv-power-sync.service reloaded and restarted."
 # 4. Deploy system boot service and udev rules (system-level)
 echo -e "\n[*] Deploying system boot service and udev rules..."
 if command -v sudo >/dev/null 2>&1; then
-    sudo cp "$REPO_DIR/systemd/tv-boot-wol.service" /etc/systemd/system/tv-boot-wol.service
+    # The boot unit runs as root, so %h would be /root; substitute the real
+    # interpreter and bin directory instead.
+    BOOT_UNIT_TMP="$(mktemp)"
+    sed -e "s|@PYTHON@|$PYTHON_BIN|g" -e "s|@BIN_DIR@|$XDG_BIN_HOME|g" \
+        "$REPO_DIR/systemd/tv-boot-wol.service" > "$BOOT_UNIT_TMP"
+    sudo install -m 644 "$BOOT_UNIT_TMP" /etc/systemd/system/tv-boot-wol.service
+    rm -f "$BOOT_UNIT_TMP"
     sudo systemctl daemon-reload
     sudo systemctl enable tv-boot-wol.service
     echo "  System service tv-boot-wol.service updated."

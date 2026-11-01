@@ -604,13 +604,18 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 </tr>
 <tr>
 <td style="text-align:left"><code>TV_PYTHON</code></td>
-<td style="text-align:left">repo <code>venv/bin/python</code></td>
+<td style="text-align:left"><code>$XDG_DATA_HOME/tizenpowersync/venv/bin/python</code></td>
 <td style="text-align:left">Interpreter substituted into the systemd unit by <code>deploy.sh</code></td>
 </tr>
 <tr>
 <td style="text-align:left"><code>TV_TOKEN_FILE</code></td>
 <td style="text-align:left"><code>~/.local/state/tizenpowersync/tv_token.txt</code></td>
 <td style="text-align:left">Pairing token path</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>TV_DRM_INFO</code></td>
+<td style="text-align:left"><code>drm_info.json</code> (working directory)</td>
+<td style="text-align:left">JSON snapshot read by <code>parse_drm_info</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -619,7 +624,8 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <hr />
 <h2 id="directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance<a class="headerlink" href="#directory-structure-xdg-compliance" title="Link to this section">#</a></h2>
 <ul>
-<li><strong>Source Repository</strong>: <code>~/src/tizenpowersync/</code></li>
+<li><strong>Source Repository</strong>: <code>~/src/tizenpowersync/</code> (any location works)</li>
+<li><strong>Application Data</strong>: <code>~/.local/share/tizenpowersync/</code> (venv; honours <code>$XDG_DATA_HOME</code>)</li>
 <li><strong>Shared Helpers</strong>: <a href="ARCHITECTURE.html#27-tvlibpy"><code>tvlib.py</code></a> (config, logging, WoL, CEC, sysfs, backoff)</li>
 <li><strong>User Executables</strong>: <code>~/.local/bin/</code> (<code>control_tv</code>, <code>tv_power_daemon</code>, <code>boot_wol</code>, <code>parse_drm_info</code>, <code>pair_samsung_tv</code>, <code>tvlib.py</code>)</li>
 <li><strong>Systemd User Service</strong>: <code>~/.config/systemd/user/tv-power-sync.service</code></li>
@@ -632,12 +638,16 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <code>deploy.sh</code> provisions both:</p>
 <pre><code class="language-bash">./deploy.sh
 </code></pre>
-<p>If no usable <code>venv/</code> exists, the script creates one with
-<code>python3 -m venv --system-site-packages venv</code> (so the system <code>dbus</code>/<code>gi</code>
-bindings stay importable) and installs <code>samsungtvws</code> into it. It then installs
-<code>tvlib.py</code> alongside the scripts, substitutes the selected interpreter into
-<code>tv-power-sync.service</code> (<code>TV_PYTHON</code> overrides the choice), rewrites the
-installed shebangs to it, and restarts the user service.</p>
+<p>If no usable venv exists, the script creates one at
+<code>$XDG_DATA_HOME/tizenpowersync/venv</code> (default <code>~/.local/share/tizenpowersync/venv</code>)
+with <code>python3 -m venv --system-site-packages</code>, so the system <code>dbus</code>/<code>gi</code> bindings
+stay importable, and installs <code>samsungtvws</code> into it. The clone is only the
+source: after deployment it can be moved or deleted, because the executables live
+in <code>~/.local/bin</code> and the services point at the venv in the data directory.</p>
+<p>The script then installs <code>tvlib.py</code> alongside the scripts, substitutes the
+selected interpreter into <code>tv-power-sync.service</code> and the boot unit
+(<code>TV_PYTHON</code> overrides the choice), rewrites the installed shebangs to it, and
+restarts the user service.</p>
 <p>An existing venv that cannot see <code>dbus</code>/<code>gi</code> is repaired by adding a
 version-matched <code>000-system-bindings.pth</code> (equivalent to
 <code>--system-site-packages</code>) instead of being re-created. The script fails with an

@@ -641,7 +641,9 @@ single-path rule as the daemon: CEC standby when docked, WebSocket <code>KEY_POW
 only as a fallback. All commands use list-form <code>subprocess</code> calls (no shell).</p>
 <h3 id="24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code><a class="headerlink" href="#24-parse_drm_infopy" title="Link to this section">#</a></h3>
 <p>Formats <code>drm_info -j</code> output: driver/caps, connectors and EDID, bpc/HDR
-metadata, CRTC timings, and plane usage.</p>
+metadata, CRTC timings, and plane usage. It reads <code>argv[1]</code> when given, otherwise
+<code>TV_DRM_INFO</code> (default <code>drm_info.json</code> in the working directory) and falls back
+to running <code>drm_info -j</code> when the file is missing.</p>
 <h3 id="25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code><a class="headerlink" href="#25-pair_samsung_tvpy" title="Link to this section">#</a></h3>
 <p>One-off WebSocket pairing helper (ports 8002/8001). Uses <code>TV_IP</code> and writes the
 token to <code>TV_TOKEN_FILE</code> (default <code>~/.local/state/tizenpowersync/tv_token.txt</code>).</p>
@@ -869,23 +871,31 @@ per ~75s, when the TV is unplugged from AC or deliberately off.</p>
 </tr>
 <tr>
 <td style="text-align:left"><code>TV_PYTHON</code></td>
-<td style="text-align:left">repo <code>venv/bin/python</code></td>
-<td style="text-align:left"><code>deploy.sh</code> unit substitution</td>
+<td style="text-align:left"><code>$XDG_DATA_HOME/tizenpowersync/venv/bin/python</code></td>
+<td style="text-align:left"><code>deploy.sh</code> interpreter override</td>
 </tr>
 <tr>
 <td style="text-align:left"><code>TV_TOKEN_FILE</code></td>
 <td style="text-align:left"><code>~/.local/state/tizenpowersync/tv_token.txt</code></td>
 <td style="text-align:left">pairing helper</td>
 </tr>
+<tr>
+<td style="text-align:left"><code>TV_DRM_INFO</code></td>
+<td style="text-align:left"><code>drm_info.json</code> (cwd)</td>
+<td style="text-align:left"><code>parse_drm_info</code> snapshot</td>
+</tr>
 </tbody>
 </table></div>
-<p><a href="README.html#deployment"><code>deploy.sh</code></a> creates <code>venv/</code> with <code>--system-site-packages</code>
-when no usable venv is present, installs <code>samsungtvws</code>, and prefers that
-interpreter (<code>TV_PYTHON</code> overrides it). If an existing venv cannot see the system
-bindings it writes a version-matched <code>000-system-bindings.pth</code> into the venv (the
-same effect as the flag) rather than re-creating it. It substitutes the selected
-interpreter into <code>ExecStart=@PYTHON@ ...</code>, rewrites the installed script shebangs
-to match, fails if no interpreter can import <code>dbus</code>/<code>gi</code>, and warns if
+<p><a href="README.html#deployment"><code>deploy.sh</code></a> keeps the venv outside the clone, at
+<code>$XDG_DATA_HOME/tizenpowersync/venv</code> (default
+<code>~/.local/share/tizenpowersync/venv</code>), so the checkout can be moved or deleted
+after deployment. When the venv is missing the script creates it with
+<code>--system-site-packages</code> and installs <code>samsungtvws</code>; <code>TV_PYTHON</code> overrides the
+interpreter. If an existing venv cannot see the system bindings it writes a
+version-matched <code>000-system-bindings.pth</code> into the venv (the same effect as the
+flag) rather than re-creating it. It substitutes the selected interpreter into
+the user and boot units (<code>@PYTHON@</code>, <code>@BIN_DIR@</code>), rewrites the installed script
+shebangs to match, fails if no interpreter can import <code>dbus</code>/<code>gi</code>, and warns if
 <code>samsungtvws</code> is missing.</p>
 </div>
       <footer class="doc-footer">

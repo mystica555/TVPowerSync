@@ -7,7 +7,8 @@ Before=display-manager.service sddm.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/home/mike/.local/bin/boot_wol.py
+# @PYTHON@ and @BIN_DIR@ are substituted by deploy.sh for the installing user.
+ExecStart=@PYTHON@ @BIN_DIR@/boot_wol.py
 TimeoutSec=10
 
 [Install]

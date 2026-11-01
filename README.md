@@ -53,8 +53,9 @@ All scripts read the same environment variables (defaults match the original set
 | `CEC_DEVICE` | `/dev/cec0` | HDMI-CEC adapter |
 | `TV_MODE` | `3840x2160@60` | Mode re-asserted via `kscreen-doctor` |
 | `TV_LOG_LEVEL` | `INFO` | Logging level (`DEBUG` is useful for CEC failures) |
-| `TV_PYTHON` | repo `venv/bin/python` | Interpreter substituted into the systemd unit by `deploy.sh` |
+| `TV_PYTHON` | `$XDG_DATA_HOME/tizenpowersync/venv/bin/python` | Interpreter substituted into the systemd unit by `deploy.sh` |
 | `TV_TOKEN_FILE` | `~/.local/state/tizenpowersync/tv_token.txt` | Pairing token path |
+| `TV_DRM_INFO` | `drm_info.json` (working directory) | JSON snapshot read by `parse_drm_info` |
 
 Override persistent values in the systemd unit (for example
 `systemctl --user edit tv-power-sync.service`), not in the scripts.
@@ -63,7 +64,8 @@ Override persistent values in the systemd unit (for example
 
 ## Directory Structure & XDG Compliance
 
-- **Source Repository**: `~/src/tizenpowersync/`
+- **Source Repository**: `~/src/tizenpowersync/` (any location works)
+- **Application Data**: `~/.local/share/tizenpowersync/` (venv; honours `$XDG_DATA_HOME`)
 - **Shared Helpers**: [`tvlib.py`](ARCHITECTURE.md#27-tvlibpy) (config, logging, WoL, CEC, sysfs, backoff)
 - **User Executables**: `~/.local/bin/` (`control_tv`, `tv_power_daemon`, `boot_wol`, `parse_drm_info`, `pair_samsung_tv`, `tvlib.py`)
 - **Systemd User Service**: `~/.config/systemd/user/tv-power-sync.service`
@@ -81,12 +83,17 @@ The daemon needs `dbus` and `gi` (system packages) plus `samsungtvws` (pip).
 ./deploy.sh
 ```
 
-If no usable `venv/` exists, the script creates one with
-`python3 -m venv --system-site-packages venv` (so the system `dbus`/`gi`
-bindings stay importable) and installs `samsungtvws` into it. It then installs
-`tvlib.py` alongside the scripts, substitutes the selected interpreter into
-`tv-power-sync.service` (`TV_PYTHON` overrides the choice), rewrites the
-installed shebangs to it, and restarts the user service.
+If no usable venv exists, the script creates one at
+`$XDG_DATA_HOME/tizenpowersync/venv` (default `~/.local/share/tizenpowersync/venv`)
+with `python3 -m venv --system-site-packages`, so the system `dbus`/`gi` bindings
+stay importable, and installs `samsungtvws` into it. The clone is only the
+source: after deployment it can be moved or deleted, because the executables live
+in `~/.local/bin` and the services point at the venv in the data directory.
+
+The script then installs `tvlib.py` alongside the scripts, substitutes the
+selected interpreter into `tv-power-sync.service` and the boot unit
+(`TV_PYTHON` overrides the choice), rewrites the installed shebangs to it, and
+restarts the user service.
 
 An existing venv that cannot see `dbus`/`gi` is repaired by adding a
 version-matched `000-system-bindings.pth` (equivalent to
