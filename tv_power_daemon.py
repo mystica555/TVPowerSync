@@ -48,6 +48,9 @@ SETTLE_SECONDS = 3.0
 # Tizen can keep reporting/streaming states for a long time after a standby
 # command. During this guard, never take the "already on" fast path.
 OFF_GUARD_SECONDS = 30.0
+# KDE's locker re-asserts DPMS around a blank/restore. Debounce an On
+# transition so a bounce cannot start a wake that the next sleep must cancel.
+PANEL_ON_SETTLE_MS = 800
 # While docked, hold one WebSocket open so port 8001 never goes cold.
 # Tizen drops a remote-control session that stays quiet for ~30s, so ping
 # well inside that window. A control frame every 10s is negligible traffic.
@@ -121,6 +124,7 @@ class TVPowerSyncDaemon:
         self._state_lock = threading.Lock()
         self._commanded_off = False
         self._last_commanded_off = 0.0
+        self._last_wake_requested = 0.0
         self._offline_streak = 0
         self._watchdog_running = False
 
@@ -128,6 +132,8 @@ class TVPowerSyncDaemon:
         self._last_fallback_check = 0.0
         self._display_debounce_id = 0
         self._pending_trigger = ""
+        self._panel_on_timeout_id = 0
+        self._pending_panel_on_reason = ""
 
         self.uevent_socket = None
         self.setup_uevent_listener()
@@ -167,6 +173,11 @@ class TVPowerSyncDaemon:
     def _initial_sync_worker(self) -> None:
         try:
             if self.state == "awake":
+                if self.is_locked:
+                    log.info(
+                        "[*] Session is locked at startup; leaving TV power unchanged."
+                    )
+                    return
                 if self.read_external_display_status() != "connected":
                     return
                 tv_state = tvlib.get_tv_power_state(self.cec, self.config.tv_ip)
@@ -421,6 +432,32 @@ class TVPowerSyncDaemon:
         self.dpms_timer_id = GLib.timeout_add(interval_ms, self.on_dpms_poll)
         log.debug("DPMS poll interval set to %dms", interval_ms)
 
+    def _schedule_panel_wake(self, reason: str) -> None:
+        """Debounce a panel On so a DPMS bounce cannot start a full wake."""
+        self._cancel_panel_wake()
+        self._pending_panel_on_reason = reason
+        self._panel_on_timeout_id = GLib.timeout_add(
+            PANEL_ON_SETTLE_MS, self._on_panel_on_settled
+        )
+
+    def _cancel_panel_wake(self) -> None:
+        if self._panel_on_timeout_id:
+            GLib.source_remove(self._panel_on_timeout_id)
+            self._panel_on_timeout_id = 0
+        self._pending_panel_on_reason = ""
+
+    def _on_panel_on_settled(self) -> bool:
+        self._panel_on_timeout_id = 0
+        reason = self._pending_panel_on_reason
+        self._pending_panel_on_reason = ""
+        # The panel may have flipped back off in the meantime (the locker does
+        # this when it re-asserts DPMS after blanking).
+        if self.read_hardware_dpms() != "On":
+            log.info("[*] Panel On transition was transient; leaving TV power unchanged.")
+            return False
+        self.handle_screen_on(reason)
+        return False
+
     def on_dpms_poll(self) -> bool:
         """Cheap sysfs read; no subprocesses and no network here."""
         current = self.read_hardware_dpms()
@@ -428,9 +465,10 @@ class TVPowerSyncDaemon:
             log.info("Hardware DPMS transition: %s -> %s", self.last_hw_dpms, current)
             self.last_hw_dpms = current
             if current == "Off":
+                self._cancel_panel_wake()
                 self.handle_screen_off("Laptop display DPMS went Off (hardware)")
             elif current == "On":
-                self.handle_screen_on("Laptop display DPMS went On (hardware)")
+                self._schedule_panel_wake("Laptop display DPMS went On (hardware)")
 
         if self.uevent_socket is None:
             now = time.monotonic()
@@ -604,8 +642,18 @@ class TVPowerSyncDaemon:
         with self._state_lock:
             self._commanded_off = False
 
+    def _mark_wake_requested(self) -> None:
+        with self._state_lock:
+            self._last_wake_requested = time.monotonic()
+
     def _commanded_off_recently(self, window: float = 12.0) -> bool:
         with self._state_lock:
+            # A wake attempt voids the duplicate-off guard: if the TV was woken
+            # (or a wake was cut short before it could clear the flag), the next
+            # panel-off has to re-send standby instead of being dropped as a
+            # duplicate of the command that the wake just undid.
+            if self._last_wake_requested > self._last_commanded_off:
+                return False
             return (
                 self._commanded_off
                 and (time.monotonic() - self._last_commanded_off) < window
@@ -651,6 +699,7 @@ class TVPowerSyncDaemon:
                 )
                 return
             intent = self._new_intent_locked("on")
+            self._mark_wake_requested()
 
         threading.Thread(
             target=self._wake_worker, args=(intent, reason), daemon=True
@@ -996,6 +1045,28 @@ class TVPowerSyncDaemon:
         else:
             log.info("[*] External display not connected; skipping TV wake.")
 
+    def sync_lock_state(self) -> None:
+        """Adopt the locker's current state once the signal listener attaches.
+
+        Keeps the poll interval, the keepalive and the startup reconciliation
+        honest when the daemon starts (or restarts) at the lock screen.
+        """
+        try:
+            bus = dbus.SessionBus()
+            obj = bus.get_object(
+                "org.freedesktop.ScreenSaver", "/org/freedesktop/ScreenSaver"
+            )
+            locked = bool(
+                dbus.Interface(obj, "org.freedesktop.ScreenSaver").GetActive()
+            )
+        except Exception as exc:
+            log.debug("ScreenSaver state query failed: %s", exc)
+            return
+        if locked != self.is_locked:
+            log.info("Adopting current screen lock state: locked=%s", locked)
+            self.is_locked = locked
+            self.update_dpms_timer(interval_ms=250 if locked else 2000)
+
     def on_screensaver_active_changed(self, active: bool) -> None:
         if active:
             log.info("KDE ScreenSaver ActiveChanged: TRUE (locked)")
@@ -1078,6 +1149,7 @@ def main() -> int:
             )
             daemon.session_signals_registered = True
             log.info("D-Bus Session Bus signal listener registered.")
+            daemon.sync_lock_state()
             return True
         except Exception as exc:
             log.warning(

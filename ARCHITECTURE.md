@@ -223,6 +223,14 @@ The intent queue handles duplicate OFF requests; there is no longer a
 At startup, if the panel is already `Off`, the daemon creates a sleep intent
 after 500ms instead of assuming the TV is already off.
 
+A panel `On` transition is debounced for 800ms before it wakes the TV. KDE's
+locker re-asserts DPMS around a blank/restore, and waking on that bounce meant
+the next sleep request was cancelled by the wake it had just started. The timer
+is dropped when the panel goes `Off` again, so a sleep request is never
+superseded by a bounce, while a genuine pointer or keyboard wake at the lock
+screen still starts the normal wake path. Startup reconciliation skips the wake
+while the session is locked, so a daemon restart cannot toggle the TV.
+
 ### 3.4 Suspend / Resume
 
 `PrepareForSleep(true)` creates a sleep intent. systemd does not wait for
