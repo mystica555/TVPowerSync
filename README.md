@@ -183,5 +183,6 @@ parse_drm_info       # Summarize DRM GPU pipes, planes, and connector capabiliti
 
 ## License
 
-TVPowerSync is licensed under the BSD 3-Clause License. See [LICENSE](LICENSE)
-for the full text.
+TVPowerSync is licensed under the BSD 3-Clause License. See
+[LICENSE](https://github.com/mystica555/TVPowerSync/blob/master/LICENSE) for the
+full text.
