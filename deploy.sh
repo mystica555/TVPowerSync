@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: BSD-3-Clause
 set -euo pipefail
 
 # XDG Base Directory specification compliance

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Build the checked-in HTML documentation from README.md and ARCHITECTURE.md.
 
 The generated pages are self-contained: the shared theme is inlined into every

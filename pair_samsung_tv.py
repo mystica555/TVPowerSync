@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 pair_samsung_tv.py - Initiate WebSocket pairing with Samsung Smart TV (2016 KU7000)
 

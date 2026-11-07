@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 tvlib.py - Shared TV / HDMI-CEC / Wake-on-LAN helpers.
 

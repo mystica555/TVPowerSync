@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 tv_backends.py - Vendor-specific TV power backends.
 

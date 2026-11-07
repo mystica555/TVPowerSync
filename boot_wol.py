@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 boot_wol.py - Gratuitous Wake-on-LAN and backend wake at boot.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 tv_power_daemon.py - Synchronize TV power with laptop display state.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 pair_lg_tv.py - Pair with an LG webOS TV.
 

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
 [Unit]
 Description=Wake TV via the configured power backend at Boot
 After=network.target network-online.target NetworkManager.service

@@ -177,3 +177,10 @@ parse_drm_info       # Summarize DRM GPU pipes, planes, and connector capabiliti
 - LG webOS needs network standby / “Mobile TV On” enabled for WoL. Vizio
   SmartCast usually closes its HTTPS API in standby, and Eco mode disables WoL;
   re-run `pair_vizio_tv.py` after a factory reset or token invalidation.
+
+---
+
+## License
+
+TVPowerSync is licensed under the BSD 3-Clause License. See [LICENSE](LICENSE)
+for the full text.

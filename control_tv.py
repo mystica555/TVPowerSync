@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """
 control_tv.py - Manual power control and diagnostics for the configured TV.
 
