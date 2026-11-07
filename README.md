@@ -9,20 +9,21 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
 ## Full Feature Set
 
 1. **Real-Time Hardware DPMS Synchronization ([`tv_power_daemon.py`](ARCHITECTURE.md#21-tv_power_daemonpy-tv-power-syncservice))**:
-   - Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked.
+   - Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked. This is the display's DPMS state, not the lid; lid transitions are event-driven.
    - **Screen Off**: locks the session (`loginctl lock-session`) and asks the configured backend for a decisive standby. The Samsung backend uses discrete HDMI-CEC `STANDBY` when docked and falls back to WebSocket `KEY_POWER` only after a NACKed or ignored command is proven not to have landed. Roku, Android TV, Fire TV, LG webOS and Vizio SmartCast use their own API after CEC, and every path verifies delivery instead of trusting an exit status.
    - **Screen On**: wakes through the backend (multi-NIC Wake-on-LAN plus discrete CEC/API wake), then re-asserts the native mode via `kscreen-doctor output.<connector>.mode.<TV_MODE>` once the TV confirms it is awake.
-   - **Non-blocking event loop**: every CEC/WoL/WebSocket/kscreen call runs in a worker thread. The GLib loop only reads sysfs and dispatches intents.
+   - **Non-blocking event loop**: every CEC/WoL/WebSocket/kscreen call runs in a worker thread. The GLib loop only performs cheap sysfs/socket reads, handles D-Bus signals, and dispatches intents.
    - **Startup reconciliation**: a daemon start while the panel is already off commands the TV off; a start while the panel is on and docked wakes the TV if it is in standby.
 
 2. **Event-Driven Dock Hotplug & Undock Wi-Fi Sleep**:
    - **Kernel Netlink UEvents**: DRM hotplug and USB dock attach/detach are pushed into the GLib loop. Events are coalesced with a 400ms debounce because USB-C/PD renegotiation emits bursts.
-   - **Real fallback**: if the netlink bind fails, the daemon polls external display state every 2s instead of silently losing hotplug detection.
+   - **Real fallback**: if the netlink listener cannot be bound or later fails, the daemon polls external display state every 2s instead of silently losing hotplug detection.
    - **Dock Plug-In (`disconnected -> connected`)**: clears wake backoff and runs the decisive wake sequence.
    - **Dock Unplug (`connected -> disconnected`)**: cancels any in-flight wake, skips the now-dead CEC adapter, and retries the backend's Wi-Fi path across the NetworkManager route failover window.
 
 3. **Event-Driven Laptop Lid Synchronization**:
-   - Listens on the System D-Bus for `PropertiesChanged` on `org.freedesktop.login1.Manager` (`LidClosed`); zero ACPI polling.
+   - Reads `LidClosed` once at startup through `systemd-logind` on the System D-Bus; `/proc/acpi` is only a one-time fallback if that initial query fails. The lid is **never polled**.
+   - After startup, listens for `PropertiesChanged` on `org.freedesktop.login1.Manager` (`LidClosed`). If the system-bus listener cannot be registered, registration is retried every 5s; there is no ACPI polling fallback.
    - Closing the lid creates a sleep intent. Opening it clears backoff and wakes the TV if the dock is connected.
 
 4. **Intent Model, Serialized CEC & Exponential Backoff**:

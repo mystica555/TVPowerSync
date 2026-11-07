@@ -65,6 +65,11 @@ wake” with “sleep now” and could not stop an in-flight sleep retry.
 
 #### Monitored inputs
 
+Lid position, dock/display hotplug, KDE screen-lock state and suspend/resume are
+event-driven. The internal panel's DPMS state is the only routinely polled
+input; external-display state falls back to a 2-second poll only if the netlink
+listener is unavailable. The lid is read once at startup and never polled.
+
 1. **Kernel Netlink KObject UEvent socket**
    - Binds multicast group 1 (`NETLINK_KOBJECT_UEVENT`), raises `SO_RCVBUF` to
      1 MiB, and attaches to `GLib.io_add_watch`.
@@ -73,13 +78,21 @@ wake” with “sleep now” and could not stop an in-flight sleep retry.
      traffic and the daemon's own DPMS changes are ignored.
    - Events are coalesced by a 400ms one-shot timer, because USB-C/PD
      renegotiation and MST setup emit bursts and transient `connected` reads.
-   - If the netlink bind fails, `on_dpms_poll` calls
-     `check_external_display_transition()` every 2 seconds. This is the fallback
-     the previous version only logged about.
+   - If the netlink listener is unavailable (bind failure or socket error),
+     `on_dpms_poll` calls `check_external_display_transition()` every 2 seconds.
+     This is the fallback the previous version only logged about.
 
 2. **Laptop lid (`login1.PropertiesChanged`, `LidClosed`)**
-   - Read once at startup via D-Bus with a `/proc/acpi` fallback; afterwards
-     purely event-driven. The handler filters on the `login1.Manager` interface.
+   - The state is read **once at startup** via the system D-Bus. If that query
+     fails, `/proc/acpi/button/lid/*/state` is read once as a bootstrap
+     fallback; it is not used again.
+   - Afterwards, transitions arrive as `PropertiesChanged` signals on
+     `org.freedesktop.login1.Manager`. The handler filters on that interface
+     and `LidClosed`, then updates the cached state.
+   - There is no periodic lid polling. If the system-bus signal receiver cannot
+     be registered, the daemon retries registration every 5s; it does not fall
+     back to ACPI polling, so lid events are unavailable until registration
+     succeeds.
 
 3. **Adaptive hardware DPMS tracking**
    - Reads `/sys/class/drm/*-eDP-*/dpms` (falling back to LVDS/DSI).
@@ -319,6 +332,7 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 | Boot (docked) | `tv-boot-wol.service` after network-online | 3x WoL + CEC wake |
 | Dock plugged | netlink uevent, 400ms debounce | reset backoff, decisive wake |
 | Dock unplugged | netlink uevent, 400ms debounce | cancel wake, Wi-Fi sleep with route-failover retry |
+| Lid state at startup | one-time `login1` query (`/proc/acpi` fallback) | seed cached state; no polling |
 | Lid closed | `login1` PropertiesChanged | sleep intent |
 | Lid opened | `login1` PropertiesChanged | wake if docked |
 | Idle DPMS / Esc | panel DPMS On→Off | lock session, sleep intent |
