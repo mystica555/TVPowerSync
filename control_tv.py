@@ -130,7 +130,8 @@ def standby_tv(config: tvlib.Config, cec: tvlib.CecController) -> None:
     if state in ("standby", "to-standby"):
         print(f"[*] TV is already in {state}. Skipping power command.")
     elif tvlib.external_display_connected() and cec.standby():
-        # One discrete command only; a WebSocket toggle afterwards could undo it.
+        # Only fall back to a toggle when CEC did not confirm delivery; the
+        # toggle would otherwise undo the standby.
         print("[*] TV standby delivered via HDMI-CEC.")
     elif tvlib.is_tv_network_awake(config.tv_ip, timeout=0.6) and tvlib.send_key(
         config.tv_ip

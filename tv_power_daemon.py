@@ -17,8 +17,10 @@ Power intent model:
   KEY_POWER after a wake has already started.
 
 Actions:
-  - Screen off: lock the session, then discrete HDMI-CEC standby when docked,
-    falling back to a WebSocket KEY_POWER only if CEC is unavailable.
+  - Screen off: lock the session, then discrete HDMI-CEC standby when docked.
+    cec-ctl exits 0 even for an unacknowledged frame, so the daemon verifies
+    the CEC acknowledgment and the resulting power state; if the TV does not
+    confirm standby, it falls back to the WebSocket KEY_POWER toggle.
   - Screen on: WoL + discrete CEC IMAGE_VIEW_ON/ACTIVE_SOURCE, then re-assert
     the native video mode once the TV confirms it is awake.
 """
@@ -733,36 +735,47 @@ class TVPowerSyncDaemon:
                 self._mark_commanded_off()
                 return
 
-            # Prefer the discrete CEC path; never send both a standby and a
-            # toggle, because KEY_POWER would undo the standby.
+            # Prefer the discrete CEC path. A KEY_POWER toggle is only sent
+            # after the standby path is proven not to have landed, because the
+            # toggle would undo a standby that did.
             if connected and not undock:
                 log.info("[*] Sending HDMI-CEC standby to TV (%s)...", reason)
                 if self.cec.standby(cancel):
                     self._mark_commanded_off()
                     log.info(
-                        "[*] TV sleep command delivered via HDMI-CEC (%s).", reason
+                        "[*] TV acknowledged HDMI-CEC standby (%s).", reason
                     )
-                    return
-                if cancel.is_set():
-                    return
-                log.warning(
-                    "HDMI-CEC standby did not confirm; re-checking power state "
-                    "before the Wi-Fi fallback."
-                )
-                state_after = tvlib.get_tv_power_state(
-                    self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
-                )
-                if cancel.is_set():
-                    return
-                if state_after in ("standby", "to-standby"):
-                    self._mark_commanded_off()
-                    log.info(
-                        "[*] TV reached %s despite the CEC error; skipping the "
-                        "WebSocket toggle.",
-                        state_after,
+                    if self._confirm_sleep(cancel):
+                        return
+                    if cancel.is_set():
+                        return
+                    log.warning(
+                        "[!] TV still reports on after repeated CEC standby; "
+                        "falling back to Wi-Fi WebSocket."
                     )
-                    return
-                log.warning("Falling back to Wi-Fi WebSocket for TV standby.")
+                else:
+                    if cancel.is_set():
+                        return
+                    log.warning(
+                        "HDMI-CEC standby was not acknowledged; re-checking "
+                        "power state before the Wi-Fi fallback."
+                    )
+                    state_after = tvlib.get_tv_power_state(
+                        self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
+                    )
+                    if cancel.is_set():
+                        return
+                    if state_after in ("standby", "to-standby"):
+                        self._mark_commanded_off()
+                        log.info(
+                            "[*] TV reached %s despite the missing CEC "
+                            "acknowledgment; skipping the WebSocket toggle.",
+                            state_after,
+                        )
+                        return
+                    log.warning(
+                        "Falling back to Wi-Fi WebSocket for TV standby."
+                    )
 
             # The warm socket is sourced from Wi-Fi, so it outlives the dock
             # removal. Use it before any probe or reconnect work.
@@ -816,6 +829,37 @@ class TVPowerSyncDaemon:
             log.exception("Error while sending TV sleep command (%s)", reason)
         finally:
             self._finish_intent(intent)
+
+    def _confirm_sleep(self, cancel: threading.Event) -> bool:
+        """Confirm an acknowledged CEC standby actually reaches standby.
+
+        cec-ctl can return success while Tizen ignores the message, so watch
+        the CEC power state briefly. A missing reply is normal once the TV
+        powers down; a persistent 'on' is not.
+        """
+        for attempt in range(1, 4):
+            if cancel.wait(1.0):
+                return False
+            state = self.cec.power_state(cancel)
+            if cancel.is_set():
+                return False
+            if state in ("standby", "to-standby"):
+                log.info("[*] TV confirmed '%s' via HDMI-CEC.", state)
+                return True
+            if state not in ("on", "to-on"):
+                log.debug(
+                    "No CEC power state after standby; assuming the TV is "
+                    "powering down."
+                )
+                return True
+            log.warning(
+                "[!] TV still reports '%s' after standby (attempt %d/3).",
+                state,
+                attempt,
+            )
+            if attempt < 3 and self.cec.standby(cancel):
+                log.info("[*] Re-sent HDMI-CEC standby.")
+        return False
 
     # ------------------------------------------------------------------
     # Wake path
@@ -1133,7 +1177,10 @@ def main() -> int:
         log.error("Invalid configuration: %s", exc)
         return 2
 
-    log.info("Starting Samsung TV Power Synchronization Daemon (event-driven)...")
+    log.info(
+        "Starting Samsung TV Power Synchronization Daemon v%s (event-driven)...",
+        tvlib.__version__,
+    )
 
     DBusGMainLoop(set_as_default=True)
     daemon = TVPowerSyncDaemon(config)

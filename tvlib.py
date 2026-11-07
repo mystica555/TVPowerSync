@@ -44,6 +44,21 @@ KNOWN_POWER_STATES = frozenset({"on", "standby", "to-on", "to-standby"})
 log = logging.getLogger("tv")
 
 
+def _read_version() -> str:
+    """Read the release version shipped next to this module."""
+    try:
+        with open(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION"),
+            encoding="utf-8",
+        ) as handle:
+            return handle.read().strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+__version__ = _read_version()
+
+
 def setup_logging() -> None:
     """Configure stdout logging once, honouring TV_LOG_LEVEL."""
     level_name = os.environ.get("TV_LOG_LEVEL", "INFO").upper()
@@ -327,6 +342,21 @@ def parse_power_state(output: str) -> Optional[str]:
     return None
 
 
+def cec_transmit_acknowledged(
+    result: Optional[subprocess.CompletedProcess],
+) -> bool:
+    """Return True only when cec-ctl transmitted and the peer acknowledged.
+
+    cec-ctl exits 0 even when no device acknowledges the CEC frame (it prints
+    "Tx, Not Acknowledged"), so its exit status alone does not prove that the
+    TV received a command.
+    """
+    if result is None or result.returncode != 0:
+        return False
+    output = (result.stdout or "") + (result.stderr or "")
+    return "Not Acknowledged" not in output
+
+
 class CecController:
     """Serialized access to a single HDMI-CEC adapter.
 
@@ -403,7 +433,7 @@ class CecController:
             self.action_timeout,
             cancel,
         )
-        return result is not None and result.returncode == 0
+        return cec_transmit_acknowledged(result)
 
     def standby(self, cancel: Optional[threading.Event] = None) -> bool:
         result = self._run(
@@ -411,7 +441,13 @@ class CecController:
             self.action_timeout,
             cancel,
         )
-        return result is not None and result.returncode == 0
+        if not cec_transmit_acknowledged(result):
+            log.warning(
+                "HDMI-CEC standby was not acknowledged; the TV did not "
+                "confirm receipt."
+            )
+            return False
+        return True
 
 
 def get_tv_power_state(

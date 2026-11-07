@@ -10,7 +10,7 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
 
 1. **Real-Time Hardware DPMS Synchronization ([`tv_power_daemon.py`](ARCHITECTURE.md#21-tv_power_daemonpy-tv-power-syncservice))**:
    - Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked.
-   - **Screen Off**: locks the session (`loginctl lock-session`) and then uses **one** power path — discrete HDMI-CEC `STANDBY` when docked, with WebSocket `KEY_POWER` only as a fallback if CEC fails. The two are never sent together, so a toggle can't undo the standby.
+   - **Screen Off**: locks the session (`loginctl lock-session`) and then uses **one** power path — discrete HDMI-CEC `STANDBY` when docked, with WebSocket `KEY_POWER` only as a fallback if CEC fails. `cec-ctl` exits 0 even for an unacknowledged frame, so delivery is verified by the CEC acknowledgment and a short power-state check; a NACKed or ignored standby falls back to the Wi-Fi toggle instead of being logged as success. The toggle runs only after the TV fails to confirm standby, so it cannot undo a standby that did land.
    - **Screen On**: wakes the TV with multi-NIC Wake-on-LAN bursts and discrete HDMI-CEC (`IMAGE_VIEW_ON` + `ACTIVE_SOURCE`), then re-asserts the native mode via `kscreen-doctor output.<connector>.mode.<TV_MODE>` once the TV confirms it is awake.
    - **Non-blocking event loop**: every CEC/WoL/WebSocket/kscreen call runs in a worker thread. The GLib loop only reads sysfs and dispatches intents.
    - **Startup reconciliation**: a daemon start while the panel is already off commands the TV off; a start while the panel is on and docked wakes the TV if it is in standby.

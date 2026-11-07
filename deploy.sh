@@ -179,6 +179,8 @@ for script in "${SCRIPTS[@]}"; do
 done
 install -m 644 "$REPO_DIR/tvlib.py" "$XDG_BIN_HOME/tvlib.py"
 echo "  Installed: $XDG_BIN_HOME/tvlib.py"
+install -m 644 "$REPO_DIR/VERSION" "$XDG_BIN_HOME/VERSION"
+echo "  Installed: $XDG_BIN_HOME/VERSION ($(cat "$REPO_DIR/VERSION"))"
 
 # 3. Deploy systemd user service, substituting the interpreter path
 echo -e "\n[*] Deploying systemd user service..."

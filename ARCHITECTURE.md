@@ -195,10 +195,16 @@ Triggered by DPMS off, lid close, dock unplug and suspend.
 2. **Cooldown** — skip if a sleep command was delivered less than 12s ago.
 3. **Pre-flight state** — CEC query; if already `standby`/`to-standby`, mark the
    cooldown and stop.
-4. **Single path** — when docked, send one CEC `STANDBY`. If and only if that
-   fails, fall back to WebSocket `KEY_POWER`. The previous implementation sent
-   both unconditionally, so the toggle could wake a TV the standby had just
-   turned off.
+4. **Single path with delivery proof** — when docked, send one CEC `STANDBY`.
+   `cec-ctl` exits 0 even when the frame is not acknowledged (`Tx, Not
+   Acknowledged`), and the TV does not act on a NACKed frame. A missing ACK is
+   therefore treated as failure: the daemon re-checks the CEC power state, then
+   falls back to WebSocket `KEY_POWER`. After an acknowledged standby it also
+   watches CEC power status for a few seconds, re-sending the standby if the TV
+   still reports `on`. The previous implementation trusted the exit status, so
+   a NACKed standby was logged as delivered and the TV stayed on. The toggle is
+   sent only after the standby has been proven not to have landed, so it cannot
+   undo a successful standby.
 5. **Warm control channel** — while docked and awake, the daemon holds one
    WebSocket to the TV (`tvlib.TvLink`) and pings it every 10s. Tizen otherwise
    stops answering on port 8001 after a few idle minutes, which made the undock
@@ -219,6 +225,8 @@ Triggered by DPMS off, lid close, dock unplug and suspend.
 
 `handle_screen_off` sets state to `asleep`, runs `loginctl lock-session` with
 `XDG_SESSION_ID` when the trigger was idle DPMS, and creates a sleep intent.
+The TV is kept a mirror of the panel: a panel `On` at the lock screen wakes it
+so the password entry box is visible, and a panel `Off` puts it back to sleep.
 The intent queue handles duplicate OFF requests; there is no longer a
 “state is already asleep” early return that could permanently miss a command.
 
