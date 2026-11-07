@@ -500,7 +500,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
       <nav class="toc" aria-label="Table of contents"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#backends">Backends</a></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li><li><a href="#license">License</a></li></ul></nav>
       <p class="side-foot">
         Rendered from <a href="README.md">README.md</a><br>
-        TVPowerSync v1.1.3
+        TVPowerSync v1.1.4
       </p>
     </aside>
 
@@ -518,7 +518,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <p><strong>Real-Time Hardware DPMS Synchronization (<a href="ARCHITECTURE.html#21-tv_power_daemonpy-tv-power-syncservice"><code>tv_power_daemon.py</code></a>)</strong>:
    - Adaptive DPMS tracking: polls the internal panel at 250ms only while the session is locked, and idles at 2000ms when unlocked. This is the display's DPMS state, not the lid; lid transitions are event-driven.
    - <strong>Screen Off</strong>: locks the session (<code>loginctl lock-session</code>) and asks the configured backend for a decisive standby. The Samsung backend uses discrete HDMI-CEC <code>STANDBY</code> when docked and falls back to WebSocket <code>KEY_POWER</code> only after a NACKed or ignored command is proven not to have landed. Roku, Android TV, Fire TV, LG webOS and Vizio SmartCast use their own API after CEC, and every path verifies delivery instead of trusting an exit status.
-   - <strong>Screen On</strong>: wakes through the backend (multi-NIC Wake-on-LAN plus discrete CEC/API wake), then re-asserts the native mode via <code>kscreen-doctor output.&lt;connector&gt;.mode.&lt;TV_MODE&gt;</code> once the TV confirms it is awake.
+   - <strong>Screen On</strong>: sends a 3-burst Wake-on-LAN hint before the pre-wake CEC/API state query, so an extended-standby TV starts booting immediately, then runs the backend's full multi-NIC Wake-on-LAN plus discrete CEC/API wake. Once the TV confirms it is awake, the native mode is re-asserted via <code>kscreen-doctor output.&lt;connector&gt;.mode.&lt;TV_MODE&gt;</code>.
    - <strong>Non-blocking event loop</strong>: every CEC/WoL/WebSocket/kscreen call runs in a worker thread. The GLib loop only performs cheap sysfs/socket reads, handles D-Bus signals, and dispatches intents.
    - <strong>Startup reconciliation</strong>: a daemon start while the panel is already off commands the TV off; a start while the panel is on and docked wakes the TV if it is in standby.</p>
 </li>
@@ -799,7 +799,7 @@ parse_drm_info<span class="w">       </span><span class="c1"># Summarize DRM GPU
 full text.</p>
       </div>
       <footer class="doc-footer">
-        <p class="foot-note">Generated from <a href="README.md">README.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.3</p>
+        <p class="foot-note">Generated from <a href="README.md">README.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.4</p>
         <a class="next-card" href="ARCHITECTURE.html"><span class="next-kicker">Read next</span><span class="next-title">Architecture &amp; technical reference</span><span class="next-meta">Topology, protocols, state machine, edge cases</span></a>
       </footer>
     </article>

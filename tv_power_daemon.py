@@ -833,6 +833,14 @@ class TVPowerSyncDaemon:
             log.info("[*] Aborting wake after settle wait; external display disconnected.")
             return False
 
+        # Start the TV booting before the blocking CEC/API state query. On an
+        # extended standby that query can add several seconds; a magic packet
+        # to an already-awake TV is harmless.
+        log.info("[*] Sending early Wake-on-LAN before the TV state query...")
+        self.backend.prewake(cancel)
+        if cancel.is_set():
+            return False
+
         self._clear_commanded_off()
         self.ensure_dpms_on()
         ext_conn = tvlib.external_connector_name()

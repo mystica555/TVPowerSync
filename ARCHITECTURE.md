@@ -173,6 +173,7 @@ Vendor power policy behind a single interface:
 
 ```
 power_state(cancel, allow_network_fallback) -> on | standby | to-on | to-standby | offline
+prewake(cancel) -> early WoL hint before any state query
 wake(cancel) / nudge(cancel) -> one full attempt / a cheap repeat
 standby(cancel, undock, reason, should_abort) -> delivered?
 active_source(cancel) / keepalive() / close()
@@ -221,24 +222,28 @@ its own wake command and readiness probe.
 2. **Settle window** — if the TV was commanded off less than 3s ago, wait out
    the remainder. The wait is interruptible by a new intent. A reported `on`
    during this window is ignored (Tizen can keep port 8001 open while shutting
-   down): the pre-wake CEC query is skipped and the full WoL + CEC sequence runs
-   immediately after the settle.
-3. **Clear the off cooldown**, then ensure KDE DPMS is on *only if the panel is
+   down): the pre-wake CEC query is skipped, and the early WoL hint plus full
+   WoL + CEC sequence run immediately after the settle.
+3. **Early WoL** — send three magic-packet bursts before any blocking CEC/API
+   state query. On extended standby that query can take several seconds;
+   starting the network wake first lets the TV boot while the query runs.
+   Repeating the WoL in the full wake sequence is harmless.
+4. **Clear the off cooldown**, then ensure KDE DPMS is on *only if the panel is
    currently off* (avoids spawning a Qt process on every wake).
-4. **Fast path** — query CEC. If already `on`/`to-on`, re-assert the video mode
+5. **Fast path** — query CEC. If already `on`/`to-on`, re-assert the video mode
    and CEC active source and return.
-5. **Wake** — 5 WoL bursts (one `ip` enumeration cached for the whole sequence)
+6. **Wake** — 5 WoL bursts (one `ip` enumeration cached for the whole sequence)
    plus a single `cec-ctl --playback --to 0 --image-view-on --active-source`
    invocation.
-6. **Verification loop** — up to 10 attempts, polling TCP every 0.75s for the
+7. **Verification loop** — up to 10 attempts, polling TCP every 0.75s for the
    first four attempts and every 1.5s afterwards. WoL is re-sent each round; the
    blocking CEC wake is repeated only every third round so it does not delay the
    polls. The loop exits immediately if the intent is cancelled or the dock is
    unplugged.
-7. **Video mode re-assert** — `kscreen-doctor output.<connector>.mode.<TV_MODE>`.
+8. **Video mode re-assert** — `kscreen-doctor output.<connector>.mode.<TV_MODE>`.
    Using the mode string rather than a positional index survives mode-table
    changes.
-8. **[Backoff](#35-watchdog-backoff)** — a failed, still-current wake doubles the delay (max 15min).
+9. **[Backoff](#35-watchdog-backoff)** — a failed, still-current wake doubles the delay (max 15min).
    Superseded wakes do not apply backoff.
 
 `KEY_POWER` is never sent during a wake: Samsung treats it as a toggle, so wake

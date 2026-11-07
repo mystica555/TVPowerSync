@@ -500,7 +500,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
       <nav class="toc" aria-label="Table of contents"><ul><li><a href="#1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology</a><ul class="toc-sub"><li><a href="#hardware-interface-stack">Hardware &amp; Interface Stack</a></li></ul></li><li><a href="#2-core-components">2. Core Components</a><ul class="toc-sub"><li><a href="#21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)</a></li><li><a href="#22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)</a></li><li><a href="#23-control_tvpy">2.3 <code>control_tv.py</code></a></li><li><a href="#24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code></a></li><li><a href="#25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code></a></li><li><a href="#26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code></a></li><li><a href="#27-tvlibpy">2.7 <code>tvlib.py</code></a></li><li><a href="#28-tv_backendspy">2.8 <code>tv_backends.py</code></a></li><li><a href="#29-pair_lg_tvpy">2.9 <code>pair_lg_tv.py</code></a></li><li><a href="#210-pair_vizio_tvpy">2.10 <code>pair_vizio_tv.py</code></a></li></ul></li><li><a href="#3-operational-workflows">3. Operational Workflows</a><ul class="toc-sub"><li><a href="#31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)</a></li><li><a href="#32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)</a></li><li><a href="#33-screen-off-lock">3.3 Screen Off / Lock</a></li><li><a href="#34-suspend-resume">3.4 Suspend / Resume</a></li><li><a href="#35-watchdog-backoff">3.5 Watchdog Backoff</a></li></ul></li><li><a href="#4-event-flow-summary">4. Event Flow Summary</a></li><li><a href="#5-configuration">5. Configuration</a></li></ul></nav>
       <p class="side-foot">
         Rendered from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a><br>
-        TVPowerSync v1.1.3
+        TVPowerSync v1.1.4
       </p>
     </aside>
 
@@ -659,6 +659,7 @@ one-shot fallback.</p>
 <h3 id="28-tv_backendspy">2.8 <code>tv_backends.py</code><a class="headerlink" href="#28-tv_backendspy" title="Link to this section">#</a></h3>
 <p>Vendor power policy behind a single interface:</p>
 <div class="highlight"><pre><span></span><code>power_state(cancel, allow_network_fallback) -&gt; on | standby | to-on | to-standby | offline
+prewake(cancel) -&gt; early WoL hint before any state query
 wake(cancel) / nudge(cancel) -&gt; one full attempt / a cheap repeat
 standby(cancel, undock, reason, should_abort) -&gt; delivered?
 active_source(cancel) / keepalive() / close()
@@ -699,8 +700,12 @@ its own wake command and readiness probe.</p>
 <li><strong>Settle window</strong> — if the TV was commanded off less than 3s ago, wait out
    the remainder. The wait is interruptible by a new intent. A reported <code>on</code>
    during this window is ignored (Tizen can keep port 8001 open while shutting
-   down): the pre-wake CEC query is skipped and the full WoL + CEC sequence runs
-   immediately after the settle.</li>
+   down): the pre-wake CEC query is skipped, and the early WoL hint plus full
+   WoL + CEC sequence run immediately after the settle.</li>
+<li><strong>Early WoL</strong> — send three magic-packet bursts before any blocking CEC/API
+   state query. On extended standby that query can take several seconds;
+   starting the network wake first lets the TV boot while the query runs.
+   Repeating the WoL in the full wake sequence is harmless.</li>
 <li><strong>Clear the off cooldown</strong>, then ensure KDE DPMS is on <em>only if the panel is
    currently off</em> (avoids spawning a Qt process on every wake).</li>
 <li><strong>Fast path</strong> — query CEC. If already <code>on</code>/<code>to-on</code>, re-assert the video mode
@@ -998,7 +1003,7 @@ shebangs to match, fails if no interpreter can import <code>dbus</code>/<code>gi
 any vendor library is missing.</p>
       </div>
       <footer class="doc-footer">
-        <p class="foot-note">Generated from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.3</p>
+        <p class="foot-note">Generated from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.4</p>
         <a class="next-card back" href="README.html"><span class="next-kicker">Back to</span><span class="next-title">Overview, configuration &amp; deployment</span><span class="next-meta">Features, environment variables, CLI usage</span></a>
       </footer>
     </article>

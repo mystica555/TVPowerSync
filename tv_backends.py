@@ -194,6 +194,22 @@ class TvBackend:
             return False
         return self._cec_wake(cancel) or sent
 
+    def prewake(self, cancel: Optional[threading.Event] = None) -> None:
+        """Start a network wake before any slow CEC/API state query.
+
+        An extended-standby TV can take seconds to answer a CEC power query.
+        Sending the magic packet first lets the TV start booting while that
+        query runs; repeating it in the full wake sequence is harmless.
+        """
+        if self.config.tv_mac and (cancel is None or not cancel.is_set()):
+            tvlib.send_wol(
+                self.config.tv_mac,
+                self.config.tv_ip,
+                bursts=3,
+                delay_between=0.05,
+                cancel=cancel,
+            )
+
     def nudge(self, cancel: Optional[threading.Event] = None) -> None:
         """Cheap repeat used between verification polls."""
         if self.config.tv_mac and (cancel is None or not cancel.is_set()):
