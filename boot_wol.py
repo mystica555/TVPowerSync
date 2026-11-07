@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-boot_wol.py - Gratuitous Wake-on-LAN and HDMI-CEC wake at boot.
+boot_wol.py - Gratuitous Wake-on-LAN and backend wake at boot.
 
 Runs once per boot (systemd oneshot). If an external display, a USB-C dock or
 the home network is present and the laptop panel is not in DPMS Off, it wakes
@@ -11,6 +11,7 @@ import glob
 import logging
 import sys
 
+import tv_backends
 import tvlib
 
 log = logging.getLogger("tv.boot")
@@ -52,30 +53,34 @@ def main() -> int:
     tvlib.setup_logging()
     try:
         config = tvlib.Config.from_env()
+        backend = tv_backends.create_backend(config)
     except ValueError as exc:
         log.error("Invalid configuration: %s", exc)
         return 2
 
-    if tvlib.read_panel_dpms() == "Off":
-        log.info("Laptop display is in hardware DPMS Off (sleeping). Skipping boot wake.")
-        return 0
+    try:
+        if tvlib.read_panel_dpms() == "Off":
+            log.info(
+                "Laptop display is in hardware DPMS Off (sleeping). "
+                "Skipping boot wake."
+            )
+            return 0
 
-    connected, reason = is_tv_connected()
-    if not connected:
-        log.info("Skipping boot wake: %s", reason)
-        return 0
+        connected, reason = is_tv_connected()
+        if not connected:
+            log.info("Skipping boot wake: %s", reason)
+            return 0
 
-    log.info("Boot wake triggered: %s", reason)
-    log.info("Sending rapid Wake-on-LAN burst (3 packets, 50ms interval) across all NICs...")
-    tvlib.send_wol(config.tv_mac, config.tv_ip, bursts=3, delay_between=0.05)
+        log.info("Boot wake triggered: %s", reason)
+        log.info("Sending wake sequence via the %s backend...", backend.name)
+        if backend.wake():
+            log.info("Wake sequence sent via %s.", backend.name)
+        else:
+            log.warning("[!] %s wake command failed.", backend.name)
 
-    cec = tvlib.CecController(config.cec_device)
-    if cec.wake():
-        log.info("Sent HDMI-CEC IMAGE_VIEW_ON + ACTIVE_SOURCE to TV.")
-    else:
-        log.warning("[!] CEC wake transmission failed (adapter missing or busy).")
-
-    log.info("Boot wake sequence completed.")
+        log.info("Boot wake sequence completed.")
+    finally:
+        backend.close()
     return 0
 
 

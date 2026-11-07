@@ -30,7 +30,7 @@ import tvlib
 
 TOKEN_FILE = os.environ.get(
     "TV_TOKEN_FILE",
-    os.path.expanduser("~/.local/state/tizenpowersync/tv_token.txt"),
+    os.path.expanduser("~/.local/state/tvpowersync/tv_token.txt"),
 )
 
 

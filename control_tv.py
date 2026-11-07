@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-control_tv.py - Manual power control and diagnostics for the Samsung TV.
+control_tv.py - Manual power control and diagnostics for the configured TV.
 
 Usage:
-    ./control_tv.py status      # Check DPMS, CEC power state, lock state, reachability
-    ./control_tv.py wake        # Wake TV (WoL + CEC Image View On + DPMS/mode sync)
-    ./control_tv.py standby     # Put TV into standby (CEC first, Wi-Fi fallback)
+    ./control_tv.py status      # Check DPMS, backend power state, lock state, reachability
+    ./control_tv.py wake        # Wake TV through the selected backend
+    ./control_tv.py standby     # Put TV into standby through the selected backend
     ./control_tv.py wol         # Send Wake-on-LAN magic packets only
 
-Configuration is read from TV_IP / TV_MAC / CEC_DEVICE / TV_MODE (see tvlib.py).
+Backend and addresses are read from TV_BACKEND / TV_IP / TV_MAC / CEC_DEVICE /
+TV_MODE / ... (see tvlib.py).
 """
 
 import subprocess
@@ -20,6 +21,7 @@ try:
 except ImportError:
     dbus = None
 
+import tv_backends
 import tvlib
 
 
@@ -31,20 +33,23 @@ def run(cmd: list[str], timeout: float = 15.0):
         return None
 
 
-def show_status(config: tvlib.Config, cec: tvlib.CecController) -> None:
-    print("=== Display Power Management (DPMS) ===")
+def show_status(config: tvlib.Config, backend: tv_backends.TvBackend) -> None:
+    print("=== TV Backend ===")
+    print(f"{backend.name}: {backend.description}")
+
+    print("\n=== Display Power Management (DPMS) ===")
     result = run(["kscreen-doctor", "--dpms", "show"])
     if result is not None and result.stdout.strip():
         print(result.stdout.strip())
     else:
         print("DPMS query returned no output.")
 
-    print("\n=== HDMI-CEC Power Status ===")
-    state = cec.power_state()
-    if state:
-        print(f"CEC pwr-state: {state}")
-    else:
-        print("CEC query returned no power state.")
+    print("\n=== TV Power State ===")
+    state = backend.power_state()
+    print(f"Backend power state: {state}")
+    if backend.cec is not None:
+        cec_state = backend.cec.power_state()
+        print(f"CEC pwr-state: {cec_state or 'no response'}")
 
     print("\n=== KDE Screensaver Status (via Python D-Bus) ===")
     if dbus is not None:
@@ -63,10 +68,21 @@ def show_status(config: tvlib.Config, cec: tvlib.CecController) -> None:
         print("Screensaver: python-dbus module not available.")
 
     print("\n=== Network Reachability ===")
-    if tvlib.is_tv_network_awake(config.tv_ip, timeout=0.4):
-        print(f"TV network interface ({config.tv_ip}:8001) is AWAKE and responding.")
+    if backend.probe_port:
+        if tvlib.is_tv_network_awake(
+            config.tv_ip, timeout=0.4, port=backend.probe_port
+        ):
+            print(
+                f"TV control port {backend.probe_port} on {config.tv_ip} is "
+                "AWAKE and responding."
+            )
+        else:
+            print(
+                f"TV control port {backend.probe_port} on {config.tv_ip} is "
+                "ASLEEP / unreachable."
+            )
     else:
-        print(f"TV network interface ({config.tv_ip}:8001) is ASLEEP / unreachable.")
+        print("This backend has no network control port.")
 
 
 def assert_mode(config: tvlib.Config) -> None:
@@ -81,69 +97,59 @@ def assert_mode(config: tvlib.Config) -> None:
         print(f"[!] kscreen-doctor mode re-assert exited {result.returncode}.")
 
 
-def wake_tv(config: tvlib.Config, cec: tvlib.CecController) -> None:
+def wake_tv(config: tvlib.Config, backend: tv_backends.TvBackend) -> None:
     print("[*] Initiating TV Wake Sequence...")
     if tvlib.read_panel_dpms() != "On":
         run(["kscreen-doctor", "--dpms", "on"])
 
-    tv_state = tvlib.get_tv_power_state(cec, config.tv_ip)
+    tv_state = backend.power_state()
     if tv_state in ("on", "to-on"):
         print(f"[*] TV is already '{tv_state}'. Re-asserting active source and mode...")
+        backend.active_source()
         assert_mode(config)
-        cec.wake()
         print("[*] TV wake sequence completed.\n")
-        show_status(config, cec)
+        show_status(config, backend)
         return
 
-    print("[*] Broadcasting rapid Wake-on-LAN burst (5 packets) across all NICs...")
-    tvlib.send_wol(config.tv_mac, config.tv_ip, bursts=5, delay_between=0.05)
-
-    # Discrete wake only: never send the KEY_POWER toggle here.
-    cec.wake()
+    print(f"[*] Sending wake sequence via the {backend.name} backend...")
+    backend.wake()
 
     for attempt in range(1, 11):
-        print(f"[*] Wake attempt {attempt}/10: waiting for TV to wake via WoL/CEC...")
+        print(f"[*] Wake attempt {attempt}/10: waiting for TV to wake...")
         time.sleep(1.5)
-        current_state = tvlib.get_tv_power_state(cec, config.tv_ip)
+        current_state = backend.power_state()
         if current_state in ("on", "to-on"):
             print(
                 f"[*] TV confirmed awake ({current_state}) on attempt {attempt}. "
                 "Syncing video stream..."
             )
             assert_mode(config)
-            cec.wake()
+            backend.active_source()
             break
-        tvlib.send_wol(config.tv_mac, config.tv_ip, bursts=4, delay_between=0.05)
-        cec.wake()
+        backend.nudge()
     else:
         print("[!] TV failed to wake after 10 attempts.")
 
     print("[*] TV wake sequence completed.\n")
-    show_status(config, cec)
+    show_status(config, backend)
 
 
-def standby_tv(config: tvlib.Config, cec: tvlib.CecController) -> None:
+def standby_tv(config: tvlib.Config, backend: tv_backends.TvBackend) -> None:
     print("[*] Initiating TV Standby Sequence...")
     run(["kscreen-doctor", "--dpms", "off"])
 
-    state = tvlib.get_tv_power_state(cec, config.tv_ip)
+    state = backend.power_state()
     if state in ("standby", "to-standby"):
         print(f"[*] TV is already in {state}. Skipping power command.")
-    elif tvlib.external_display_connected() and cec.standby():
-        # Only fall back to a toggle when CEC did not confirm delivery; the
-        # toggle would otherwise undo the standby.
-        print("[*] TV standby delivered via HDMI-CEC.")
-    elif tvlib.is_tv_network_awake(config.tv_ip, timeout=0.6) and tvlib.send_key(
-        config.tv_ip
-    ):
-        print("[*] TV standby delivered via Wi-Fi WebSocket.")
+    elif backend.standby(reason="CLI standby"):
+        print(f"[*] TV standby delivered via the {backend.name} backend.")
     else:
-        print("[!] Could not deliver standby over CEC or Wi-Fi.")
+        print("[!] Could not deliver standby via the selected backend.")
 
     print("[*] Waiting 4 seconds for the TV network stack to spin down...")
     time.sleep(4)
     print("[*] TV standby commands completed.\n")
-    show_status(config, cec)
+    show_status(config, backend)
 
 
 def main() -> int:
@@ -154,25 +160,27 @@ def main() -> int:
 
     try:
         config = tvlib.Config.from_env()
+        backend = tv_backends.create_backend(config)
     except ValueError as exc:
         print(f"[!] Invalid configuration: {exc}")
         return 2
 
-    cec = tvlib.CecController(config.cec_device)
     action = sys.argv[1].lower()
-
-    if action == "status":
-        show_status(config, cec)
-    elif action in ("wake", "on"):
-        wake_tv(config, cec)
-    elif action in ("standby", "off", "sleep"):
-        standby_tv(config, cec)
-    elif action == "wol":
-        tvlib.send_wol(config.tv_mac, config.tv_ip)
-    else:
-        print(f"Unknown action: {action}")
-        print(__doc__.strip())
-        return 1
+    try:
+        if action == "status":
+            show_status(config, backend)
+        elif action in ("wake", "on"):
+            wake_tv(config, backend)
+        elif action in ("standby", "off", "sleep"):
+            standby_tv(config, backend)
+        elif action == "wol":
+            tvlib.send_wol(config.tv_mac, config.tv_ip)
+        else:
+            print(f"Unknown action: {action}")
+            print(__doc__.strip())
+            return 1
+    finally:
+        backend.close()
     return 0
 
 

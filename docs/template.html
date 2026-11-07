@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="{{DESCRIPTION}}">
+<title>{{TITLE}}</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233556e8'/%3E%3Cg fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Crect x='7' y='9' width='18' height='12' rx='2'/%3E%3Cpath d='M13 25h6M16 21v4'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+{{STYLE}}
+</style>
+</head>
+<body class="{{PAGE_CLASS}}">
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="README.html" aria-label="TVPowerSync documentation">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </span>
+      <span class="brand-copy"><strong>TVPowerSync</strong><small>{{BRAND_SUBTITLE}}</small></span>
+    </a>
+    <nav class="topbar-nav" aria-label="Documents">
+      {{TOPBAR_NAV}}<a class="pill ghost" href="{{REPO_URL}}" aria-label="View TVPowerSync on GitHub">GitHub <span aria-hidden="true">&#8599;</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="page" id="content" tabindex="-1">
+  <div class="shell">
+    <div class="mobile-toc">
+      <details>
+        <summary>On this page</summary>
+        <nav class="toc" aria-label="Table of contents (mobile)">{{TOC}}</nav>
+      </details>
+    </div>
+
+    <aside class="sidebar">
+      <p class="side-label">Documentation</p>
+      <nav class="doc-switch" aria-label="Documents">{{SIDEBAR_SWITCH}}</nav>
+      <p class="side-label">On this page</p>
+      <nav class="toc" aria-label="Table of contents">{{TOC}}</nav>
+      <p class="side-foot">
+        Rendered from <a href="{{SOURCE}}">{{SOURCE}}</a><br>
+        TVPowerSync v{{VERSION}}
+      </p>
+    </aside>
+
+    <article class="doc">
+      <div class="doc-body"><p class="eyebrow">{{EYEBROW}}</p>
+{{CONTENT}}
+      </div>
+      <footer class="doc-footer">
+        <p class="foot-note">Generated from <a href="{{SOURCE}}">{{SOURCE}}</a> &middot; <a href="{{REPO_URL}}">GitHub</a> &middot; v{{VERSION}}</p>
+        {{NEXT_CARD}}
+      </footer>
+    </article>
+  </div>
+</main>
+</body>
+</html>

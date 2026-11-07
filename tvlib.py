@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-tvlib.py - Shared Samsung TV / HDMI-CEC / Wake-on-LAN helpers.
+tvlib.py - Shared TV / HDMI-CEC / Wake-on-LAN helpers.
 
-Used by tv_power_daemon.py, control_tv.py and boot_wol.py so the network,
-CEC and sysfs logic exists in exactly one place.
+Used by tv_power_daemon.py, control_tv.py, boot_wol.py and the vendor
+backends so configuration, network, CEC and sysfs logic exists in exactly
+one place.
 
 Configuration is read from the environment (all optional):
-  TV_IP       TV address                  (default 192.168.0.2)
-  TV_MAC      TV MAC address              (default 40:16:3b:d0:4f:8b)
-  CEC_DEVICE  HDMI-CEC adapter            (default /dev/cec0)
-  TV_MODE     Native mode for kscreen     (default 3840x2160@60)
+  TV_IP         TV address                (default 192.168.0.2)
+  TV_MAC        TV MAC address            (default 40:16:3b:d0:4f:8b)
+  TV_BACKEND    Power backend             (samsung, cec, roku, androidtv, firetv)
+  CEC_DEVICE    HDMI-CEC adapter          (default /dev/cec0; empty disables CEC)
+  CEC_PHYS_ADDR CEC physical address      (default 1.0.0.0)
+  TV_MODE       Native mode for kscreen   (default 3840x2160@60)
   TV_LOG_LEVEL  Logging level             (default INFO)
 """
 
@@ -35,9 +38,23 @@ from typing import Iterable, Optional
 DEFAULT_TV_IP = "192.168.0.2"
 DEFAULT_TV_MAC = "40:16:3b:d0:4f:8b"
 DEFAULT_CEC_DEVICE = "/dev/cec0"
+DEFAULT_CEC_PHYS_ADDR = "1.0.0.0"
 DEFAULT_TV_MODE = "3840x2160@60"
+DEFAULT_TV_BACKEND = "samsung"
+DEFAULT_ECP_PORT = 8060
+DEFAULT_ADB_PORT = 5555
+TV_BACKENDS = frozenset({"cec", "samsung", "roku", "androidtv", "firetv"})
 TV_WS_PORT = 8001
 _WS_NAME_B64 = base64.b64encode(b"SamsungTvRemote").decode("ascii")
+_STATE_HOME = os.environ.get(
+    "XDG_STATE_HOME", os.path.expanduser("~/.local/state")
+)
+DEFAULT_ANDROIDTV_CERT = os.path.join(
+    _STATE_HOME, "tvpowersync", "androidtv_cert.pem"
+)
+DEFAULT_ANDROIDTV_KEY = os.path.join(
+    _STATE_HOME, "tvpowersync", "androidtv_key.pem"
+)
 
 KNOWN_POWER_STATES = frozenset({"on", "standby", "to-on", "to-standby"})
 
@@ -96,12 +113,34 @@ def build_magic_packet(mac: str) -> bytes:
 _MODE_RE = re.compile(r"^\d+x\d+(?:@\d+(?:\.\d+)?)?$")
 
 
+def _env_port(name: str, default: int) -> int:
+    raw = os.environ.get(name, str(default)).strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"Invalid {name} {raw!r}") from exc
+    if not 1 <= value <= 65535:
+        raise ValueError(f"Invalid {name} {raw!r} (expected 1-65535)")
+    return value
+
+
+_PHYS_ADDR_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+
+
 @dataclass(frozen=True)
 class Config:
     tv_ip: str = DEFAULT_TV_IP
     tv_mac: str = DEFAULT_TV_MAC
     cec_device: str = DEFAULT_CEC_DEVICE
     tv_mode: str = DEFAULT_TV_MODE
+    backend: str = DEFAULT_TV_BACKEND
+    cec_phys_addr: str = DEFAULT_CEC_PHYS_ADDR
+    ecp_port: int = DEFAULT_ECP_PORT
+    adb_port: int = DEFAULT_ADB_PORT
+    adb_bin: str = "adb"
+    androidtv_cert: str = DEFAULT_ANDROIDTV_CERT
+    androidtv_key: str = DEFAULT_ANDROIDTV_KEY
+    androidtv_client_name: str = "TVPowerSync"
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -111,18 +150,56 @@ class Config:
         except ValueError as exc:
             raise ValueError(f"Invalid TV_IP {tv_ip!r}") from exc
 
-        tv_mac = os.environ.get("TV_MAC", DEFAULT_TV_MAC).strip()
-        normalize_mac(tv_mac)  # validate eagerly
+        backend = os.environ.get("TV_BACKEND", DEFAULT_TV_BACKEND).strip().lower()
+        if backend not in TV_BACKENDS:
+            raise ValueError(
+                f"Invalid TV_BACKEND {backend!r} (choose from "
+                f"{', '.join(sorted(TV_BACKENDS))})"
+            )
+
+        # The default MAC belongs to the Samsung installation. For another
+        # backend, an unset TV_MAC must disable WoL rather than wake the wrong
+        # device on the LAN.
+        raw_mac = os.environ.get("TV_MAC")
+        if raw_mac is None and backend != "samsung":
+            tv_mac = ""
+        else:
+            tv_mac = (raw_mac if raw_mac is not None else DEFAULT_TV_MAC).strip()
+            normalize_mac(tv_mac)  # validate eagerly
 
         tv_mode = os.environ.get("TV_MODE", DEFAULT_TV_MODE).strip()
         if not _MODE_RE.match(tv_mode):
             raise ValueError(f"Invalid TV_MODE {tv_mode!r} (expected e.g. 3840x2160@60)")
+
+        cec_phys_addr = os.environ.get(
+            "CEC_PHYS_ADDR", DEFAULT_CEC_PHYS_ADDR
+        ).strip()
+        if not _PHYS_ADDR_RE.match(cec_phys_addr):
+            raise ValueError(
+                f"Invalid CEC_PHYS_ADDR {cec_phys_addr!r} "
+                "(expected e.g. 1.0.0.0)"
+            )
 
         return cls(
             tv_ip=tv_ip,
             tv_mac=tv_mac,
             cec_device=os.environ.get("CEC_DEVICE", DEFAULT_CEC_DEVICE).strip(),
             tv_mode=tv_mode,
+            backend=backend,
+            cec_phys_addr=cec_phys_addr,
+            ecp_port=_env_port("TV_ECP_PORT", DEFAULT_ECP_PORT),
+            adb_port=_env_port("TV_ADB_PORT", DEFAULT_ADB_PORT),
+            adb_bin=os.environ.get("ADB_BIN", "adb").strip() or "adb",
+            androidtv_cert=os.environ.get(
+                "ANDROIDTV_CERT", DEFAULT_ANDROIDTV_CERT
+            ).strip(),
+            androidtv_key=os.environ.get(
+                "ANDROIDTV_KEY", DEFAULT_ANDROIDTV_KEY
+            ).strip(),
+            androidtv_client_name=os.environ.get(
+                "ANDROIDTV_CLIENT_NAME", "TVPowerSync"
+            ).strip()
+            or "TVPowerSync",
         )
 
 
@@ -254,6 +331,9 @@ def send_wol(
     cancel: Optional[threading.Event] = None,
 ) -> bool:
     """Broadcast Wake-on-LAN magic packets across all active IPv4 NICs."""
+    if not mac:
+        log.debug("Wake-on-LAN skipped: no TV_MAC is configured")
+        return False
     try:
         packet = build_magic_packet(mac)
     except ValueError as exc:
@@ -371,10 +451,12 @@ class CecController:
         device: str = DEFAULT_CEC_DEVICE,
         query_timeout: float = 1.0,
         action_timeout: float = 4.0,
+        phys_addr: str = DEFAULT_CEC_PHYS_ADDR,
     ) -> None:
         self.device = device
         self.query_timeout = query_timeout
         self.action_timeout = action_timeout
+        self.phys_addr = phys_addr
         self._lock = threading.Lock()
 
     def _run(
@@ -428,7 +510,22 @@ class CecController:
                 "0",
                 "--image-view-on",
                 "--active-source",
-                "phys-addr=1.0.0.0",
+                f"phys-addr={self.phys_addr}",
+            ],
+            self.action_timeout,
+            cancel,
+        )
+        return cec_transmit_acknowledged(result)
+
+    def active_source(self, cancel: Optional[threading.Event] = None) -> bool:
+        """Discrete ACTIVE_SOURCE, without another power-on request."""
+        result = self._run(
+            [
+                "--playback",
+                "--to",
+                "0",
+                "--active-source",
+                f"phys-addr={self.phys_addr}",
             ],
             self.action_timeout,
             cancel,

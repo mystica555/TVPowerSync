@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="This document explains the hardware topology, protocols, event sources, state machine and edge-case mitigations of TizenPowerSync.">
-<title>Detailed Architecture &amp; Technical Reference — TizenPowerSync</title>
+<meta name="description" content="This document explains the hardware topology, protocols, event sources, state machine and edge-case mitigations of TVPowerSync.">
+<title>Detailed Architecture &amp; Technical Reference — TVPowerSync</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233556e8'/%3E%3Cg fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Crect x='7' y='9' width='18' height='12' rx='2'/%3E%3Cpath d='M13 25h6M16 21v4'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 :root {
@@ -472,14 +472,14 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="README.html" aria-label="TizenPowerSync documentation">
+    <a class="brand" href="README.html" aria-label="TVPowerSync documentation">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
       </span>
-      <span class="brand-copy"><strong>TizenPowerSync</strong><small>Samsung UN40KU7000</small></span>
+      <span class="brand-copy"><strong>TVPowerSync</strong><small>Multi-vendor TV control</small></span>
     </a>
     <nav class="topbar-nav" aria-label="Documents">
-      <a class="pill" href="README.html">README</a><a class="pill is-active" href="ARCHITECTURE.html" aria-current="page">Architecture</a><a class="pill ghost" href="https://github.com/mystica555/tizen-power-sync" aria-label="View TizenPowerSync on GitHub">GitHub <span aria-hidden="true">&#8599;</span></a>
+      <a class="pill" href="README.html">README</a><a class="pill is-active" href="ARCHITECTURE.html" aria-current="page">Architecture</a><a class="pill ghost" href="https://github.com/mystica555/TVPowerSync" aria-label="View TVPowerSync on GitHub">GitHub <span aria-hidden="true">&#8599;</span></a>
     </nav>
   </div>
 </header>
@@ -489,7 +489,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
     <div class="mobile-toc">
       <details>
         <summary>On this page</summary>
-        <nav class="toc" aria-label="Table of contents (mobile)"><ul><li><a href="#1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology</a><ul class="toc-sub"><li><a href="#hardware-interface-stack">Hardware &amp; Interface Stack</a></li></ul></li><li><a href="#2-core-components">2. Core Components</a><ul class="toc-sub"><li><a href="#21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)</a></li><li><a href="#22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)</a></li><li><a href="#23-control_tvpy">2.3 <code>control_tv.py</code></a></li><li><a href="#24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code></a></li><li><a href="#25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code></a></li><li><a href="#26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code></a></li><li><a href="#27-tvlibpy">2.7 <code>tvlib.py</code></a></li></ul></li><li><a href="#3-operational-workflows">3. Operational Workflows</a><ul class="toc-sub"><li><a href="#31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)</a></li><li><a href="#32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)</a></li><li><a href="#33-screen-off-lock">3.3 Screen Off / Lock</a></li><li><a href="#34-suspend-resume">3.4 Suspend / Resume</a></li><li><a href="#35-watchdog-backoff">3.5 Watchdog Backoff</a></li></ul></li><li><a href="#4-event-flow-summary">4. Event Flow Summary</a></li><li><a href="#5-configuration">5. Configuration</a></li></ul></nav>
+        <nav class="toc" aria-label="Table of contents (mobile)"><ul><li><a href="#1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology</a><ul class="toc-sub"><li><a href="#hardware-interface-stack">Hardware &amp; Interface Stack</a></li></ul></li><li><a href="#2-core-components">2. Core Components</a><ul class="toc-sub"><li><a href="#21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)</a></li><li><a href="#22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)</a></li><li><a href="#23-control_tvpy">2.3 <code>control_tv.py</code></a></li><li><a href="#24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code></a></li><li><a href="#25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code></a></li><li><a href="#26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code></a></li><li><a href="#27-tvlibpy">2.7 <code>tvlib.py</code></a></li><li><a href="#28-tv_backendspy">2.8 <code>tv_backends.py</code></a></li></ul></li><li><a href="#3-operational-workflows">3. Operational Workflows</a><ul class="toc-sub"><li><a href="#31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)</a></li><li><a href="#32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)</a></li><li><a href="#33-screen-off-lock">3.3 Screen Off / Lock</a></li><li><a href="#34-suspend-resume">3.4 Suspend / Resume</a></li><li><a href="#35-watchdog-backoff">3.5 Watchdog Backoff</a></li></ul></li><li><a href="#4-event-flow-summary">4. Event Flow Summary</a></li><li><a href="#5-configuration">5. Configuration</a></li></ul></nav>
       </details>
     </div>
 
@@ -497,44 +497,40 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
       <p class="side-label">Documentation</p>
       <nav class="doc-switch" aria-label="Documents"><a class="switch" href="README.html"><span class="switch-kicker">README</span><span class="switch-title">Overview &amp; deployment</span><span class="switch-meta">Features &middot; configuration &middot; CLI</span></a><a class="switch is-active" href="ARCHITECTURE.html" aria-current="page"><span class="switch-kicker">Architecture</span><span class="switch-title">Internals &amp; event flow</span><span class="switch-meta">Topology &middot; state machine &middot; edge cases</span></a></nav>
       <p class="side-label">On this page</p>
-      <nav class="toc" aria-label="Table of contents"><ul><li><a href="#1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology</a><ul class="toc-sub"><li><a href="#hardware-interface-stack">Hardware &amp; Interface Stack</a></li></ul></li><li><a href="#2-core-components">2. Core Components</a><ul class="toc-sub"><li><a href="#21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)</a></li><li><a href="#22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)</a></li><li><a href="#23-control_tvpy">2.3 <code>control_tv.py</code></a></li><li><a href="#24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code></a></li><li><a href="#25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code></a></li><li><a href="#26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code></a></li><li><a href="#27-tvlibpy">2.7 <code>tvlib.py</code></a></li></ul></li><li><a href="#3-operational-workflows">3. Operational Workflows</a><ul class="toc-sub"><li><a href="#31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)</a></li><li><a href="#32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)</a></li><li><a href="#33-screen-off-lock">3.3 Screen Off / Lock</a></li><li><a href="#34-suspend-resume">3.4 Suspend / Resume</a></li><li><a href="#35-watchdog-backoff">3.5 Watchdog Backoff</a></li></ul></li><li><a href="#4-event-flow-summary">4. Event Flow Summary</a></li><li><a href="#5-configuration">5. Configuration</a></li></ul></nav>
+      <nav class="toc" aria-label="Table of contents"><ul><li><a href="#1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology</a><ul class="toc-sub"><li><a href="#hardware-interface-stack">Hardware &amp; Interface Stack</a></li></ul></li><li><a href="#2-core-components">2. Core Components</a><ul class="toc-sub"><li><a href="#21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)</a></li><li><a href="#22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)</a></li><li><a href="#23-control_tvpy">2.3 <code>control_tv.py</code></a></li><li><a href="#24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code></a></li><li><a href="#25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code></a></li><li><a href="#26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code></a></li><li><a href="#27-tvlibpy">2.7 <code>tvlib.py</code></a></li><li><a href="#28-tv_backendspy">2.8 <code>tv_backends.py</code></a></li></ul></li><li><a href="#3-operational-workflows">3. Operational Workflows</a><ul class="toc-sub"><li><a href="#31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)</a></li><li><a href="#32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)</a></li><li><a href="#33-screen-off-lock">3.3 Screen Off / Lock</a></li><li><a href="#34-suspend-resume">3.4 Suspend / Resume</a></li><li><a href="#35-watchdog-backoff">3.5 Watchdog Backoff</a></li></ul></li><li><a href="#4-event-flow-summary">4. Event Flow Summary</a></li><li><a href="#5-configuration">5. Configuration</a></li></ul></nav>
       <p class="side-foot">
         Rendered from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a><br>
-        Single-file HTML
+        TVPowerSync v1.1.0
       </p>
     </aside>
 
     <article class="doc">
       <div class="doc-body"><p class="eyebrow">Documentation &middot; Technical reference</p>
-<h1>Detailed Architecture &amp; Technical Reference</h1>
+<h1 id="detailed-architecture-technical-reference">Detailed Architecture &amp; Technical Reference</h1>
 <p>This document explains the hardware topology, protocols, event sources, state
-machine and edge-case mitigations of <strong>TizenPowerSync</strong>.</p>
+machine and edge-case mitigations of <strong>TVPowerSync</strong>.</p>
 <hr />
 <h2 id="1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology<a class="headerlink" href="#1-system-overview-hardware-topology" title="Link to this section">#</a></h2>
-<p>The suite synchronizes power, input selection and the video link of a
-<strong>Samsung Tizen Smart TV (<code>UN40KU7000</code>)</strong> used as a <strong>4K60 UHD</strong> external
-monitor for a Linux laptop running <strong>KDE Plasma 6 (Wayland)</strong>.</p>
+<p>The suite synchronizes power, input selection and the video link of a TV used
+as a <strong>4K60 UHD</strong> external monitor for a Linux laptop running <strong>KDE Plasma 6
+(Wayland)</strong>. Samsung Tizen is the reference backend; the same daemon also
+drives generic HDMI-CEC, Roku ECP, Android TV Remote v2 and Fire TV ADB
+backends.</p>
 <h3 id="hardware-interface-stack">Hardware &amp; Interface Stack<a class="headerlink" href="#hardware-interface-stack" title="Link to this section">#</a></h3>
 <ul>
 <li><strong>Internal Display (<code>eDP-1</code>)</strong>: laptop panel (<code>2880x1800 @ 60Hz</code>, scale
-<code>1.6</code>, positioned at <code>(3840, 1284)</code>).</li>
-<li><strong>External Display (<code>DP-2</code>)</strong>: connected through a USB-C dock featuring:
-<ul>
+  <code>1.6</code>, positioned at <code>(3840, 1284)</code>).</li>
+<li><strong>External Display (<code>DP-2</code>)</strong>: connected through a USB-C dock featuring:</li>
 <li>a <strong>DisplayPort-to-HDMI 2.0 active converter</strong> (Parade <code>PS186</code>) exposing
-DRM connector <code>/sys/class/drm/card1-DP-2</code> and HDMI-CEC adapter <code>/dev/cec0</code>
-(<code>i915</code> driver);</li>
+    DRM connector <code>/sys/class/drm/card1-DP-2</code> and HDMI-CEC adapter <code>/dev/cec0</code>
+    (<code>i915</code> driver);</li>
 <li>a <strong>USB wired Ethernet controller</strong> (<code>enx50a0300cc53a</code>) alongside the
-laptop’s Wi-Fi interface (<code>wlo1</code>).</li>
-</ul>
-</li>
-<li><strong>Samsung Smart TV (<code>UN40KU7000</code>)</strong>:
-<ul>
+    laptop's Wi-Fi interface (<code>wlo1</code>).</li>
+<li><strong>Samsung Smart TV (<code>UN40KU7000</code>)</strong>:</li>
 <li>IP <code>192.168.0.2</code>, MAC <code>40:16:3b:d0:4f:8b</code></li>
 <li>HDMI 1 / DVI, CEC physical address <code>1.0.0.0</code>, TV logical address <code>0</code></li>
 <li>Control channels: <strong>WoL</strong> (UDP 9/7), <strong>HDMI-CEC</strong> (<code>/dev/cec0</code>), and the
-<strong>Tizen WebSocket API</strong> (port <code>8001</code>).</li>
-</ul>
-</li>
+    <strong>Tizen WebSocket API</strong> (port <code>8001</code>).</li>
 </ul>
 <p>All of these are <a href="#5-configuration">configurable</a> via <code>TV_IP</code>, <code>TV_MAC</code>, <code>CEC_DEVICE</code>, <code>TV_MODE</code>
 and <code>TV_LOG_LEVEL</code> (see <a href="#27-tvlibpy"><code>tvlib.Config</code></a>).</p>
@@ -544,89 +540,78 @@ and <code>TV_LOG_LEVEL</code> (see <a href="#27-tvlibpy"><code>tvlib.Config</cod
 <p>A long-running user-session daemon driving a <code>GLib.MainLoop</code>. The main loop does
 only cheap work — sysfs reads, socket reads and scheduling. Every CEC, WoL,
 WebSocket and <code>kscreen-doctor</code> operation runs in a worker thread.</p>
-<h4>Power intent model</h4>
+<h4 id="power-intent-model">Power intent model<a class="headerlink" href="#power-intent-model" title="Link to this section">#</a></h4>
 <p>Every request to turn the TV on or off creates an <code>Intent</code>:</p>
-<pre><code>Intent(seq, kind, cancel_event)
-</code></pre>
+<div class="highlight"><pre><span></span><code>Intent(seq, kind, cancel_event)
+</code></pre></div>
+
 <ul>
-<li>Creating a new intent increments <code>seq</code> and sets the previous intent’s
-<code>cancel</code> event.</li>
+<li>Creating a new intent increments <code>seq</code> and sets the previous intent's
+  <code>cancel</code> event.</li>
 <li>Workers check <code>cancel</code> before each side effect: before a CEC query, before
-each WoL burst, before a WebSocket key, between wake-verification attempts.</li>
+  each WoL burst, before a WebSocket key, between wake-verification attempts.</li>
 <li>The CEC controller re-checks cancellation <em>inside</em> its process lock, so a
-superseded intent cannot transmit a stale command after waiting for the
-adapter.</li>
+  superseded intent cannot transmit a stale command after waiting for the
+  adapter.</li>
 <li>Duplicate ON requests are ignored while an ON intent is active; duplicate OFF
-requests are absorbed by the 12-second cooldown and the pre-flight CEC state
-query.</li>
+  requests are absorbed by the 12-second cooldown and the pre-flight CEC state
+  query.</li>
 </ul>
 <p>This replaces the previous <code>abort_wake</code> boolean, which conflated “cancel the
 wake” with “sleep now” and could not stop an in-flight sleep retry.</p>
-<h4>Monitored inputs</h4>
+<h4 id="monitored-inputs">Monitored inputs<a class="headerlink" href="#monitored-inputs" title="Link to this section">#</a></h4>
 <ol>
 <li>
-<p><strong>Kernel Netlink KObject UEvent socket</strong></p>
-<ul>
-<li>Binds multicast group 1 (<code>NETLINK_KOBJECT_UEVENT</code>), raises <code>SO_RCVBUF</code> to
-1 MiB, and attaches to <code>GLib.io_add_watch</code>.</li>
-<li>Only <code>SUBSYSTEM=drm</code> events with <code>HOTPLUG=1</code>/<code>add</code>/<code>remove</code>, and
-<code>SUBSYSTEM=usb</code> <code>add</code>/<code>remove</code> events are considered. USB HID/hub <code>change</code>
-traffic and the daemon’s own DPMS changes are ignored.</li>
-<li>Events are coalesced by a 400ms one-shot timer, because USB-C/PD
-renegotiation and MST setup emit bursts and transient <code>connected</code> reads.</li>
-<li>If the netlink bind fails, <code>on_dpms_poll</code> calls
-<code>check_external_display_transition()</code> every 2 seconds. This is the fallback
-the previous version only logged about.</li>
-</ul>
+<p><strong>Kernel Netlink KObject UEvent socket</strong>
+   - Binds multicast group 1 (<code>NETLINK_KOBJECT_UEVENT</code>), raises <code>SO_RCVBUF</code> to
+     1 MiB, and attaches to <code>GLib.io_add_watch</code>.
+   - Only <code>SUBSYSTEM=drm</code> events with <code>HOTPLUG=1</code>/<code>add</code>/<code>remove</code>, and
+     <code>SUBSYSTEM=usb</code> <code>add</code>/<code>remove</code> events are considered. USB HID/hub <code>change</code>
+     traffic and the daemon's own DPMS changes are ignored.
+   - Events are coalesced by a 400ms one-shot timer, because USB-C/PD
+     renegotiation and MST setup emit bursts and transient <code>connected</code> reads.
+   - If the netlink bind fails, <code>on_dpms_poll</code> calls
+     <code>check_external_display_transition()</code> every 2 seconds. This is the fallback
+     the previous version only logged about.</p>
 </li>
 <li>
-<p><strong>Laptop lid (<code>login1.PropertiesChanged</code>, <code>LidClosed</code>)</strong></p>
-<ul>
-<li>Read once at startup via D-Bus with a <code>/proc/acpi</code> fallback; afterwards
-purely event-driven. The handler filters on the <code>login1.Manager</code> interface.</li>
-</ul>
+<p><strong>Laptop lid (<code>login1.PropertiesChanged</code>, <code>LidClosed</code>)</strong>
+   - Read once at startup via D-Bus with a <code>/proc/acpi</code> fallback; afterwards
+     purely event-driven. The handler filters on the <code>login1.Manager</code> interface.</p>
 </li>
 <li>
-<p><strong>Adaptive hardware DPMS tracking</strong></p>
-<ul>
-<li>Reads <code>/sys/class/drm/*-eDP-*/dpms</code> (falling back to LVDS/DSI).</li>
-<li>250ms while the session is locked, 2000ms while unlocked. sysfs has no
-inotify/poll support, so a timer is the correct mechanism; the cost is a
-few microseconds per read.</li>
-<li>If the node disappears (GPU reset, connector rename), the path is
-re-resolved. <code>Unknown</code> is never treated as “screen off”.</li>
-</ul>
+<p><strong>Adaptive hardware DPMS tracking</strong>
+   - Reads <code>/sys/class/drm/*-eDP-*/dpms</code> (falling back to LVDS/DSI).
+   - 250ms while the session is locked, 2000ms while unlocked. sysfs has no
+     inotify/poll support, so a timer is the correct mechanism; the cost is a
+     few microseconds per read.
+   - If the node disappears (GPU reset, connector rename), the path is
+     re-resolved. <code>Unknown</code> is never treated as “screen off”.</p>
 </li>
 <li>
-<p><strong>KDE ScreenSaver (<code>org.freedesktop.ScreenSaver.ActiveChanged</code>)</strong></p>
-<ul>
-<li>Switches the DPMS polling interval and drives unlock-time wake.</li>
-<li>Registration is retried every 5 seconds if the session bus is not ready
-when the user unit starts.</li>
-</ul>
+<p><strong>KDE ScreenSaver (<code>org.freedesktop.ScreenSaver.ActiveChanged</code>)</strong>
+   - Switches the DPMS polling interval and drives unlock-time wake.
+   - Registration is retried every 5 seconds if the session bus is not ready
+     when the user unit starts.</p>
 </li>
 <li>
-<p><strong><code>PrepareForSleep</code></strong></p>
-<ul>
-<li>Suspend creates sleep intent.</li>
-<li>Resume waits 2 seconds for KWin to restore DPMS, then reconciles. It never
-forces <code>kscreen-doctor --dpms on</code>, and it does nothing while the lid is
-closed.</li>
-</ul>
+<p><strong><code>PrepareForSleep</code></strong>
+   - Suspend creates sleep intent.
+   - Resume waits 2 seconds for KWin to restore DPMS, then reconciles. It never
+     forces <code>kscreen-doctor --dpms on</code>, and it does nothing while the lid is
+     closed.</p>
 </li>
 <li>
-<p><strong>Watchdog (5-second GLib timer, worker-thread check)</strong></p>
-<ul>
-<li>Preconditions: state <code>awake</code>, panel DPMS <code>On</code>, dock <code>connected</code>, lid open,
-no active wake, backoff expired.</li>
-<li>Probes TCP <code>8001</code> first (no subprocess). Only when the port is closed does
-it query CEC.</li>
-<li>A CEC <code>standby</code>/<code>to-standby</code> reading wakes immediately; <code>offline</code> requires
-two consecutive checks. The dock state is re-read after the query so an
-unplug during the check cannot trigger a false wake.</li>
-<li>Failed wake attempts apply <a href="#35-watchdog-backoff">exponential backoff</a> (60s, 120s, 240s, … up to
-900s). Backoff resets on dock connect, DPMS-on, lid-open or unlock.</li>
-</ul>
+<p><strong>Watchdog (5-second GLib timer, worker-thread check)</strong>
+   - Preconditions: state <code>awake</code>, panel DPMS <code>On</code>, dock <code>connected</code>, lid open,
+     no active wake, backoff expired.
+   - Probes TCP <code>8001</code> first (no subprocess). Only when the port is closed does
+     it query CEC.
+   - A CEC <code>standby</code>/<code>to-standby</code> reading wakes immediately; <code>offline</code> requires
+     two consecutive checks. The dock state is re-read after the query so an
+     unplug during the check cannot trigger a false wake.
+   - Failed wake attempts apply <a href="#35-watchdog-backoff">exponential backoff</a> (60s, 120s, 240s, ... up to
+     900s). Backoff resets on dock connect, DPMS-on, lid-open or unlock.</p>
 </li>
 </ol>
 <h3 id="22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)<a class="headerlink" href="#22-boot_wolpy-tv-boot-wolservice" title="Link to this section">#</a></h3>
@@ -646,87 +631,117 @@ metadata, CRTC timings, and plane usage. It reads <code>argv[1]</code> when give
 to running <code>drm_info -j</code> when the file is missing.</p>
 <h3 id="25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code><a class="headerlink" href="#25-pair_samsung_tvpy" title="Link to this section">#</a></h3>
 <p>One-off WebSocket pairing helper (ports 8002/8001). Uses <code>TV_IP</code> and writes the
-token to <code>TV_TOKEN_FILE</code> (default <code>~/.local/state/tizenpowersync/tv_token.txt</code>).</p>
+token to <code>TV_TOKEN_FILE</code> (default <code>~/.local/state/tvpowersync/tv_token.txt</code>).</p>
 <h3 id="26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code><a class="headerlink" href="#26-udev70-cec-uaccessrules" title="Link to this section">#</a></h3>
-<pre><code>KERNEL==&quot;cec*&quot;, SUBSYSTEM==&quot;cec&quot;, GROUP=&quot;video&quot;, MODE=&quot;0660&quot;, TAG+=&quot;uaccess&quot;
-</code></pre>
+<div class="highlight"><pre><span></span><code>KERNEL==&quot;cec*&quot;, SUBSYSTEM==&quot;cec&quot;, GROUP=&quot;video&quot;, MODE=&quot;0660&quot;, TAG+=&quot;uaccess&quot;
+</code></pre></div>
+
 <p>Grants the active desktop user access to <code>/dev/cec0</code> without root.</p>
 <h3 id="27-tvlibpy">2.7 <code>tvlib.py</code><a class="headerlink" href="#27-tvlibpy" title="Link to this section">#</a></h3>
 <p>Shared config, logging, WoL, CEC, WebSocket, DRM-sysfs and backoff helpers. The
-daemon, CLI and boot service all import it, so <code>send_wol</code>, power-state parsing
-and connector discovery exist in exactly one place. <code>TvLink</code> holds the optional
-kept-warm remote-control WebSocket; <code>send_key</code> remains the one-shot fallback.</p>
+daemon, CLI, boot service and backends all import it, so <code>send_wol</code>, power-state
+parsing and connector discovery exist in exactly one place. <code>TvLink</code> holds the
+optional kept-warm Samsung remote-control WebSocket; <code>send_key</code> remains the
+one-shot fallback.</p>
+<h3 id="28-tv_backendspy">2.8 <code>tv_backends.py</code><a class="headerlink" href="#28-tv_backendspy" title="Link to this section">#</a></h3>
+<p>Vendor power policy behind a single interface:</p>
+<div class="highlight"><pre><span></span><code>power_state(cancel, allow_network_fallback) -&gt; on | standby | to-on | to-standby | offline
+wake(cancel) / nudge(cancel) -&gt; one full attempt / a cheap repeat
+standby(cancel, undock, reason, should_abort) -&gt; delivered?
+active_source(cancel) / keepalive() / close()
+</code></pre></div>
+
+<p><code>TvBackend</code> supplies the CEC + WoL baseline; <code>CecBackend</code> is the vendor-neutral
+choice. <code>SamsungBackend</code> adds the Tizen WebSocket and the proven-toggle
+fallback. <code>RokuBackend</code> uses ECP (<code>/query/device-info</code>, <code>PowerOn</code>, <code>PowerOff</code>).
+<code>AndroidTvBackend</code> uses Android TV Remote v2 and expects <code>pair_android_tv.py</code> to
+have saved a client certificate. <code>FireTvBackend</code> uses ADB <code>dumpsys power</code> and
+key codes 223/224. All backends try CEC first when an adapter is configured;
+set <code>CEC_DEVICE=</code> to control a streaming box's own power instead of the TV it
+is connected to.</p>
 <hr />
 <h2 id="3-operational-workflows">3. Operational Workflows<a class="headerlink" href="#3-operational-workflows" title="Link to this section">#</a></h2>
 <h3 id="31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)<a class="headerlink" href="#31-decisive-wake-_do_decisive_wake" title="Link to this section">#</a></h3>
 <p>Triggered by dock connect, DPMS Off→On, lid open (docked), resume (docked,
-lid open) and the watchdog.</p>
+lid open) and the watchdog. The protocol steps below describe the Samsung
+backend; the daemon contract is identical for every backend, which substitutes
+its own wake command and readiness probe.</p>
 <ol>
 <li><strong>Cancellation / connection guard</strong> — abort if the intent was superseded or
-the external display is disconnected.</li>
+   the external display is disconnected.</li>
 <li><strong>Settle window</strong> — if the TV was commanded off less than 3s ago, wait out
-the remainder. The wait is interruptible by a new intent. A reported <code>on</code>
-during this window is ignored (Tizen can keep port 8001 open while shutting
-down): the pre-wake CEC query is skipped and the full WoL + CEC sequence runs
-immediately after the settle.</li>
+   the remainder. The wait is interruptible by a new intent. A reported <code>on</code>
+   during this window is ignored (Tizen can keep port 8001 open while shutting
+   down): the pre-wake CEC query is skipped and the full WoL + CEC sequence runs
+   immediately after the settle.</li>
 <li><strong>Clear the off cooldown</strong>, then ensure KDE DPMS is on <em>only if the panel is
-currently off</em> (avoids spawning a Qt process on every wake).</li>
+   currently off</em> (avoids spawning a Qt process on every wake).</li>
 <li><strong>Fast path</strong> — query CEC. If already <code>on</code>/<code>to-on</code>, re-assert the video mode
-and CEC active source and return.</li>
+   and CEC active source and return.</li>
 <li><strong>Wake</strong> — 5 WoL bursts (one <code>ip</code> enumeration cached for the whole sequence)
-plus a single <code>cec-ctl --playback --to 0 --image-view-on --active-source</code>
-invocation.</li>
+   plus a single <code>cec-ctl --playback --to 0 --image-view-on --active-source</code>
+   invocation.</li>
 <li><strong>Verification loop</strong> — up to 10 attempts, polling TCP every 0.75s for the
-first four attempts and every 1.5s afterwards. WoL is re-sent each round; the
-blocking CEC wake is repeated only every third round so it does not delay the
-polls. The loop exits immediately if the intent is cancelled or the dock is
-unplugged.</li>
+   first four attempts and every 1.5s afterwards. WoL is re-sent each round; the
+   blocking CEC wake is repeated only every third round so it does not delay the
+   polls. The loop exits immediately if the intent is cancelled or the dock is
+   unplugged.</li>
 <li><strong>Video mode re-assert</strong> — <code>kscreen-doctor output.&lt;connector&gt;.mode.&lt;TV_MODE&gt;</code>.
-Using the mode string rather than a positional index survives mode-table
-changes.</li>
+   Using the mode string rather than a positional index survives mode-table
+   changes.</li>
 <li><strong><a href="#35-watchdog-backoff">Backoff</a></strong> — a failed, still-current wake doubles the delay (max 15min).
-Superseded wakes do not apply backoff.</li>
+   Superseded wakes do not apply backoff.</li>
 </ol>
 <p><code>KEY_POWER</code> is never sent during a wake: Samsung treats it as a toggle, so wake
 uses only discrete commands.</p>
 <h3 id="32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)<a class="headerlink" href="#32-sleep-_power_off_worker" title="Link to this section">#</a></h3>
-<p>Triggered by DPMS off, lid close, dock unplug and suspend.</p>
+<p>Triggered by DPMS off, lid close, dock unplug and suspend. The delivery-proof
+steps below are the Samsung backend's; Roku ECP, Android TV Remote and Fire TV
+ADB substitute their own switch-off command and confirmation.</p>
 <ol>
 <li><strong>Cancel any in-flight wake</strong> via the new intent.</li>
 <li><strong>Cooldown</strong> — skip if a sleep command was delivered less than 12s ago.</li>
 <li><strong>Pre-flight state</strong> — CEC query; if already <code>standby</code>/<code>to-standby</code>, mark the
-cooldown and stop.</li>
-<li><strong>Single path</strong> — when docked, send one CEC <code>STANDBY</code>. If and only if that
-fails, fall back to WebSocket <code>KEY_POWER</code>. The previous implementation sent
-both unconditionally, so the toggle could wake a TV the standby had just
-turned off.</li>
+   cooldown and stop.</li>
+<li><strong>Single path with delivery proof</strong> — when docked, send one CEC <code>STANDBY</code>.
+   <code>cec-ctl</code> exits 0 even when the frame is not acknowledged (<code>Tx, Not
+   Acknowledged</code>), and the TV does not act on a NACKed frame. A missing ACK is
+   therefore treated as failure: the daemon re-checks the CEC power state, then
+   falls back to WebSocket <code>KEY_POWER</code>. After an acknowledged standby it also
+   watches CEC power status for a few seconds, re-sending the standby if the TV
+   still reports <code>on</code>. The previous implementation trusted the exit status, so
+   a NACKed standby was logged as delivered and the TV stayed on. The toggle is
+   sent only after the standby has been proven not to have landed, so it cannot
+   undo a successful standby.</li>
 <li><strong>Warm control channel</strong> — while docked and awake, the daemon holds one
-WebSocket to the TV (<code>tvlib.TvLink</code>) and pings it every 10s. Tizen otherwise
-stops answering on port 8001 after a few idle minutes, which made the undock
-path spend 6-8s in TCP retries before <code>KEY_POWER</code> could go out. The sleep key
-reuses this socket with <code>key_press_delay=0</code>, so only the server round trip
-remains. The session is sourced from the Wi-Fi address, because a socket
-bound to the dock’s Ethernet address is destroyed at the moment of undock;
-the sleep worker tries the warm link before any probe. The link is closed
-while the TV is expected to be off, and reopened automatically after a wake.</li>
+   WebSocket to the TV (<code>tvlib.TvLink</code>) and pings it every 10s. Tizen otherwise
+   stops answering on port 8001 after a few idle minutes, which made the undock
+   path spend 6-8s in TCP retries before <code>KEY_POWER</code> could go out. The sleep key
+   reuses this socket with <code>key_press_delay=0</code>, so only the server round trip
+   remains. The session is sourced from the Wi-Fi address, because a socket
+   bound to the dock's Ethernet address is destroyed at the moment of undock;
+   the sleep worker tries the warm link before any probe. The link is closed
+   while the TV is expected to be off, and reopened automatically after a wake.</li>
 <li><strong>Undock retry</strong> — after the dock is removed, CEC is gone and NetworkManager
-is failing over from the dock NIC to Wi-Fi. The worker probes reachability
-with a 0.25s TCP timeout and retries every 0.25s for up to 20 attempts
-(~10s), aborting if the dock returns or the intent is cancelled. Wake-on-LAN
-interface discovery uses ioctl rather than a forked <code>ip</code> process, so a dock
-re-enumeration cannot stall the wake path for seconds.</li>
+   is failing over from the dock NIC to Wi-Fi. The worker probes reachability
+   with a 0.25s TCP timeout and retries every 0.25s for up to 20 attempts
+   (~10s), aborting if the dock returns or the intent is cancelled. Wake-on-LAN
+   interface discovery uses ioctl rather than a forked <code>ip</code> process, so a dock
+   re-enumeration cannot stall the wake path for seconds.</li>
 </ol>
 <h3 id="33-screen-off-lock">3.3 Screen Off / Lock<a class="headerlink" href="#33-screen-off-lock" title="Link to this section">#</a></h3>
 <p><code>handle_screen_off</code> sets state to <code>asleep</code>, runs <code>loginctl lock-session</code> with
 <code>XDG_SESSION_ID</code> when the trigger was idle DPMS, and creates a sleep intent.
+The TV is kept a mirror of the panel: a panel <code>On</code> at the lock screen wakes it
+so the password entry box is visible, and a panel <code>Off</code> puts it back to sleep.
 The intent queue handles duplicate OFF requests; there is no longer a
 “state is already asleep” early return that could permanently miss a command.</p>
 <p>At startup, if the panel is already <code>Off</code>, the daemon creates a sleep intent
 after 500ms instead of assuming the TV is already off.</p>
-<p>A panel <code>On</code> transition is debounced for 800ms before it wakes the TV.
-KDE’s locker re-asserts DPMS around a blank/restore, and waking on that bounce
-meant the next sleep request was cancelled by the wake it had just started. The
-timer is dropped when the panel goes <code>Off</code> again, so a sleep request is never
+<p>A panel <code>On</code> transition is debounced for 800ms before it wakes the TV. KDE's
+locker re-asserts DPMS around a blank/restore, and waking on that bounce meant
+the next sleep request was cancelled by the wake it had just started. The timer
+is dropped when the panel goes <code>Off</code> again, so a sleep request is never
 superseded by a bounce, while a genuine pointer or keyboard wake at the lock
 screen still starts the normal wake path. Startup reconciliation skips the wake
 while the session is locked, so a daemon restart cannot toggle the TV.</p>
@@ -740,30 +755,30 @@ TV alone and waits for the DPMS poll.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th style="text-align:left">Consecutive failure</th>
-<th style="text-align:left">Next attempt</th>
+<th style="text-align: left;">Consecutive failure</th>
+<th style="text-align: left;">Next attempt</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left">1</td>
-<td style="text-align:left">60s</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">60s</td>
 </tr>
 <tr>
-<td style="text-align:left">2</td>
-<td style="text-align:left">120s</td>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">120s</td>
 </tr>
 <tr>
-<td style="text-align:left">3</td>
-<td style="text-align:left">240s</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">240s</td>
 </tr>
 <tr>
-<td style="text-align:left">4</td>
-<td style="text-align:left">480s</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">480s</td>
 </tr>
 <tr>
-<td style="text-align:left">5+</td>
-<td style="text-align:left">900s (cap)</td>
+<td style="text-align: left;">5+</td>
+<td style="text-align: left;">900s (cap)</td>
 </tr>
 </tbody>
 </table></div>
@@ -775,61 +790,61 @@ per ~75s, when the TV is unplugged from AC or deliberately off.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th style="text-align:left">Event</th>
-<th style="text-align:left">Detection</th>
-<th style="text-align:left">Action</th>
+<th style="text-align: left;">Event</th>
+<th style="text-align: left;">Detection</th>
+<th style="text-align: left;">Action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left">Boot (docked)</td>
-<td style="text-align:left"><code>tv-boot-wol.service</code> after network-online</td>
-<td style="text-align:left">3x WoL + CEC wake</td>
+<td style="text-align: left;">Boot (docked)</td>
+<td style="text-align: left;"><code>tv-boot-wol.service</code> after network-online</td>
+<td style="text-align: left;">3x WoL + CEC wake</td>
 </tr>
 <tr>
-<td style="text-align:left">Dock plugged</td>
-<td style="text-align:left">netlink uevent, 400ms debounce</td>
-<td style="text-align:left">reset backoff, decisive wake</td>
+<td style="text-align: left;">Dock plugged</td>
+<td style="text-align: left;">netlink uevent, 400ms debounce</td>
+<td style="text-align: left;">reset backoff, decisive wake</td>
 </tr>
 <tr>
-<td style="text-align:left">Dock unplugged</td>
-<td style="text-align:left">netlink uevent, 400ms debounce</td>
-<td style="text-align:left">cancel wake, Wi-Fi sleep with route-failover retry</td>
+<td style="text-align: left;">Dock unplugged</td>
+<td style="text-align: left;">netlink uevent, 400ms debounce</td>
+<td style="text-align: left;">cancel wake, Wi-Fi sleep with route-failover retry</td>
 </tr>
 <tr>
-<td style="text-align:left">Lid closed</td>
-<td style="text-align:left"><code>login1</code> PropertiesChanged</td>
-<td style="text-align:left">sleep intent</td>
+<td style="text-align: left;">Lid closed</td>
+<td style="text-align: left;"><code>login1</code> PropertiesChanged</td>
+<td style="text-align: left;">sleep intent</td>
 </tr>
 <tr>
-<td style="text-align:left">Lid opened</td>
-<td style="text-align:left"><code>login1</code> PropertiesChanged</td>
-<td style="text-align:left">wake if docked</td>
+<td style="text-align: left;">Lid opened</td>
+<td style="text-align: left;"><code>login1</code> PropertiesChanged</td>
+<td style="text-align: left;">wake if docked</td>
 </tr>
 <tr>
-<td style="text-align:left">Idle DPMS / Esc</td>
-<td style="text-align:left">panel DPMS On→Off</td>
-<td style="text-align:left">lock session, sleep intent</td>
+<td style="text-align: left;">Idle DPMS / Esc</td>
+<td style="text-align: left;">panel DPMS On→Off</td>
+<td style="text-align: left;">lock session, sleep intent</td>
 </tr>
 <tr>
-<td style="text-align:left">Mouse/key wake</td>
-<td style="text-align:left">panel DPMS Off→On</td>
-<td style="text-align:left">DPMS on (if needed), wake</td>
+<td style="text-align: left;">Mouse/key wake</td>
+<td style="text-align: left;">panel DPMS Off→On</td>
+<td style="text-align: left;">DPMS on (if needed), wake</td>
 </tr>
 <tr>
-<td style="text-align:left">TV off while working</td>
-<td style="text-align:left">5s watchdog (thread)</td>
-<td style="text-align:left">CEC state / 2× offline → wake, with backoff</td>
+<td style="text-align: left;">TV off while working</td>
+<td style="text-align: left;">5s watchdog (thread)</td>
+<td style="text-align: left;">CEC state / 2× offline → wake, with backoff</td>
 </tr>
 <tr>
-<td style="text-align:left">Suspend</td>
-<td style="text-align:left"><code>PrepareForSleep(true)</code></td>
-<td style="text-align:left">sleep intent</td>
+<td style="text-align: left;">Suspend</td>
+<td style="text-align: left;"><code>PrepareForSleep(true)</code></td>
+<td style="text-align: left;">sleep intent</td>
 </tr>
 <tr>
-<td style="text-align:left">Resume</td>
-<td style="text-align:left"><code>PrepareForSleep(false)</code> + 2s</td>
-<td style="text-align:left">reconcile only if lid open and panel on</td>
+<td style="text-align: left;">Resume</td>
+<td style="text-align: left;"><code>PrepareForSleep(false)</code> + 2s</td>
+<td style="text-align: left;">reconcile only if lid open and panel on</td>
 </tr>
 </tbody>
 </table></div>
@@ -838,57 +853,92 @@ per ~75s, when the TV is unplugged from AC or deliberately off.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th style="text-align:left">Variable</th>
-<th style="text-align:left">Default</th>
-<th style="text-align:left">Used by</th>
+<th style="text-align: left;">Variable</th>
+<th style="text-align: left;">Default</th>
+<th style="text-align: left;">Used by</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:left"><code>TV_IP</code></td>
-<td style="text-align:left"><code>192.168.0.2</code></td>
-<td style="text-align:left">daemon, CLI, boot, pairing</td>
+<td style="text-align: left;"><code>TV_IP</code></td>
+<td style="text-align: left;"><code>192.168.0.2</code></td>
+<td style="text-align: left;">daemon, CLI, boot, pairing</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>TV_MAC</code></td>
-<td style="text-align:left"><code>40:16:3b:d0:4f:8b</code></td>
-<td style="text-align:left">WoL</td>
+<td style="text-align: left;"><code>TV_MAC</code></td>
+<td style="text-align: left;"><code>40:16:3b:d0:4f:8b</code></td>
+<td style="text-align: left;">WoL (default only applies to the Samsung backend)</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>CEC_DEVICE</code></td>
-<td style="text-align:left"><code>/dev/cec0</code></td>
-<td style="text-align:left">daemon, CLI, boot</td>
+<td style="text-align: left;"><code>TV_BACKEND</code></td>
+<td style="text-align: left;"><code>samsung</code></td>
+<td style="text-align: left;">backend selection</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>TV_MODE</code></td>
-<td style="text-align:left"><code>3840x2160@60</code></td>
-<td style="text-align:left">mode re-assert</td>
+<td style="text-align: left;"><code>CEC_DEVICE</code></td>
+<td style="text-align: left;"><code>/dev/cec0</code></td>
+<td style="text-align: left;">daemon, CLI, boot (empty disables CEC)</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>TV_LOG_LEVEL</code></td>
-<td style="text-align:left"><code>INFO</code></td>
-<td style="text-align:left">all scripts</td>
+<td style="text-align: left;"><code>CEC_PHYS_ADDR</code></td>
+<td style="text-align: left;"><code>1.0.0.0</code></td>
+<td style="text-align: left;">CEC active-source address</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>TV_PYTHON</code></td>
-<td style="text-align:left"><code>$XDG_DATA_HOME/tizenpowersync/venv/bin/python</code></td>
-<td style="text-align:left"><code>deploy.sh</code> interpreter override</td>
+<td style="text-align: left;"><code>TV_ECP_PORT</code></td>
+<td style="text-align: left;"><code>8060</code></td>
+<td style="text-align: left;">Roku ECP</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>TV_TOKEN_FILE</code></td>
-<td style="text-align:left"><code>~/.local/state/tizenpowersync/tv_token.txt</code></td>
-<td style="text-align:left">pairing helper</td>
+<td style="text-align: left;"><code>TV_ADB_PORT</code></td>
+<td style="text-align: left;"><code>5555</code></td>
+<td style="text-align: left;">Fire TV ADB</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>TV_DRM_INFO</code></td>
-<td style="text-align:left"><code>drm_info.json</code> (cwd)</td>
-<td style="text-align:left"><code>parse_drm_info</code> snapshot</td>
+<td style="text-align: left;"><code>ADB_BIN</code></td>
+<td style="text-align: left;"><code>adb</code></td>
+<td style="text-align: left;">Fire TV ADB executable</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>ANDROIDTV_CERT</code> / <code>ANDROIDTV_KEY</code></td>
+<td style="text-align: left;"><code>~/.local/state/tvpowersync/androidtv_*.pem</code></td>
+<td style="text-align: left;">Android TV pairing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>ANDROIDTV_CLIENT_NAME</code></td>
+<td style="text-align: left;"><code>TVPowerSync</code></td>
+<td style="text-align: left;">Android TV pairing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_MODE</code></td>
+<td style="text-align: left;"><code>3840x2160@60</code></td>
+<td style="text-align: left;">mode re-assert</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_LOG_LEVEL</code></td>
+<td style="text-align: left;"><code>INFO</code></td>
+<td style="text-align: left;">all scripts</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_PYTHON</code></td>
+<td style="text-align: left;"><code>$XDG_DATA_HOME/tvpowersync/venv/bin/python</code></td>
+<td style="text-align: left;"><code>deploy.sh</code> interpreter override</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_TOKEN_FILE</code></td>
+<td style="text-align: left;"><code>~/.local/state/tvpowersync/tv_token.txt</code></td>
+<td style="text-align: left;">pairing helper</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_DRM_INFO</code></td>
+<td style="text-align: left;"><code>drm_info.json</code> (cwd)</td>
+<td style="text-align: left;"><code>parse_drm_info</code> snapshot</td>
 </tr>
 </tbody>
 </table></div>
 <p><a href="README.html#deployment"><code>deploy.sh</code></a> keeps the venv outside the clone, at
-<code>$XDG_DATA_HOME/tizenpowersync/venv</code> (default
-<code>~/.local/share/tizenpowersync/venv</code>), so the checkout can be moved or deleted
+<code>$XDG_DATA_HOME/tvpowersync/venv</code> (default
+<code>~/.local/share/tvpowersync/venv</code>), so the checkout can be moved or deleted
 after deployment. When the venv is missing the script creates it with
 <code>--system-site-packages</code> and installs <code>samsungtvws</code>; <code>TV_PYTHON</code> overrides the
 interpreter. If an existing venv cannot see the system bindings it writes a
@@ -897,9 +947,9 @@ flag) rather than re-creating it. It substitutes the selected interpreter into
 the user and boot units (<code>@PYTHON@</code>, <code>@BIN_DIR@</code>), rewrites the installed script
 shebangs to match, fails if no interpreter can import <code>dbus</code>/<code>gi</code>, and warns if
 <code>samsungtvws</code> is missing.</p>
-</div>
+      </div>
       <footer class="doc-footer">
-        <p class="foot-note">Converted from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/tizen-power-sync">GitHub</a> &middot; 31 Oct 2026</p>
+        <p class="foot-note">Generated from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.0</p>
         <a class="next-card back" href="README.html"><span class="next-kicker">Back to</span><span class="next-title">Overview, configuration &amp; deployment</span><span class="next-meta">Features, environment variables, CLI usage</span></a>
       </footer>
     </article>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tv_power_daemon.py - Synchronize Samsung TV power with laptop display state.
+tv_power_daemon.py - Synchronize TV power with laptop display state.
 
 Event sources:
   1. Kernel Netlink KObject UEvent socket (dock / display hotplug)
@@ -17,11 +17,10 @@ Power intent model:
   KEY_POWER after a wake has already started.
 
 Actions:
-  - Screen off: lock the session, then discrete HDMI-CEC standby when docked.
-    cec-ctl exits 0 even for an unacknowledged frame, so the daemon verifies
-    the CEC acknowledgment and the resulting power state; if the TV does not
-    confirm standby, it falls back to the WebSocket KEY_POWER toggle.
-  - Screen on: WoL + discrete CEC IMAGE_VIEW_ON/ACTIVE_SOURCE, then re-assert
+  - Screen off: lock the session, then ask the selected backend for a
+    decisive standby. The Samsung backend verifies CEC acknowledgment and
+    the resulting power state before falling back to WebSocket KEY_POWER.
+  - Screen on: backend wake (WoL + discrete CEC/API wake), then re-assert
     the native video mode once the TV confirms it is awake.
 """
 
@@ -39,6 +38,7 @@ import dbus
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
+import tv_backends
 import tvlib
 
 log = logging.getLogger("tv.daemon")
@@ -96,7 +96,7 @@ def run_cmd_async(cmd: list[str], desc: str = "") -> None:
 class TVPowerSyncDaemon:
     def __init__(self, config: tvlib.Config) -> None:
         self.config = config
-        self.cec = tvlib.CecController(config.cec_device)
+        self.backend = tv_backends.create_backend(config)
 
         self._panel_lock = threading.Lock()
         self._last_panel_warning = 0.0
@@ -150,13 +150,15 @@ class TVPowerSyncDaemon:
         self.session_signals_registered = False
         self.system_signals_registered = False
 
-        # A single warm WebSocket keeps Tizen's network control service (and
-        # port 8001) answering, so the undock KEY_POWER lands immediately.
-        self.tv_link = tvlib.TvLink(config.tv_ip)
+        # Samsung keeps one warm WebSocket so a sleep key lands immediately;
+        # other backends advertise no keepalive support and skip this thread.
         self._keepalive_stop = threading.Event()
-        threading.Thread(
-            target=self._keepalive_worker, name="tv-link-keepalive", daemon=True
-        ).start()
+        if self.backend.supports_keepalive:
+            threading.Thread(
+                target=self._keepalive_worker,
+                name="tv-link-keepalive",
+                daemon=True,
+            ).start()
 
         # Startup reconciliation runs off the main loop: a CEC query can take
         # up to a second and must not delay early D-Bus/uevent handling.
@@ -182,7 +184,7 @@ class TVPowerSyncDaemon:
                     return
                 if self.read_external_display_status() != "connected":
                     return
-                tv_state = tvlib.get_tv_power_state(self.cec, self.config.tv_ip)
+                tv_state = self.backend.power_state()
                 log.info("Initial TV power state: %s", tv_state)
                 if tv_state in ("on", "to-on") and not tvlib.external_edid_present():
                     log.warning(
@@ -509,21 +511,24 @@ class TVPowerSyncDaemon:
 
     def _watchdog_worker(self) -> None:
         try:
-            # TCP alone is not enough: port 8001 can stay open while the TV is
-            # shutting down or while its HDMI input has no EDID.
-            if (
-                tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.2)
-                and tvlib.external_edid_present()
-            ):
+            # A reachable control port alone is not enough: the TV can keep
+            # it open while shutting down or while HDMI has no EDID.
+            network_ok = bool(
+                self.backend.probe_port
+                and tvlib.is_tv_network_awake(
+                    self.config.tv_ip,
+                    timeout=0.2,
+                    port=self.backend.probe_port,
+                )
+            )
+            if network_ok and tvlib.external_edid_present():
                 self._set_offline_streak(0)
                 return
             if self.read_external_display_status() != "connected":
                 self._set_offline_streak(0)
                 return
 
-            tv_state = tvlib.get_tv_power_state(
-                self.cec, self.config.tv_ip, use_cec=True
-            )
+            tv_state = self.backend.power_state()
             # The dock may have been unplugged while the CEC query was running.
             if self.read_external_display_status() != "connected":
                 self._set_offline_streak(0)
@@ -568,6 +573,8 @@ class TVPowerSyncDaemon:
 
     def _keepalive_wanted(self) -> bool:
         """Only hold the link while the TV is expected to be on and docked."""
+        if not self.backend.supports_keepalive:
+            return False
         if self.state != "awake":
             return False
         if self.read_external_display_status() != "connected":
@@ -588,16 +595,16 @@ class TVPowerSyncDaemon:
             try:
                 if not self._keepalive_wanted():
                     if warm:
-                        self.tv_link.close()
+                        self.backend.close_keepalive()
                         warm = False
                     continue
-                ok = self.tv_link.keepalive()
+                ok = self.backend.keepalive()
                 if ok != warm:
                     if ok:
                         log.info(
-                            "[*] TV control channel is warm; sleep commands "
-                            "will not wait for port %d to wake.",
-                            tvlib.TV_WS_PORT,
+                            "[*] %s control channel is warm; sleep commands "
+                            "will not wait for a cold connection.",
+                            self.backend.name,
                         )
                     else:
                         log.debug(
@@ -725,9 +732,7 @@ class TVPowerSyncDaemon:
                 return
 
             connected = self.read_external_display_status() == "connected"
-            tv_state = tvlib.get_tv_power_state(
-                self.cec, self.config.tv_ip, use_cec=connected, cancel=cancel
-            )
+            tv_state = self.backend.power_state(cancel=cancel)
             if cancel.is_set():
                 return
             if tv_state in ("standby", "to-standby"):
@@ -735,131 +740,36 @@ class TVPowerSyncDaemon:
                 self._mark_commanded_off()
                 return
 
-            # Prefer the discrete CEC path. A KEY_POWER toggle is only sent
-            # after the standby path is proven not to have landed, because the
-            # toggle would undo a standby that did.
             if connected and not undock:
-                log.info("[*] Sending HDMI-CEC standby to TV (%s)...", reason)
-                if self.cec.standby(cancel):
-                    self._mark_commanded_off()
-                    log.info(
-                        "[*] TV acknowledged HDMI-CEC standby (%s).", reason
-                    )
-                    if self._confirm_sleep(cancel):
-                        return
-                    if cancel.is_set():
-                        return
-                    log.warning(
-                        "[!] TV still reports on after repeated CEC standby; "
-                        "falling back to Wi-Fi WebSocket."
-                    )
-                else:
-                    if cancel.is_set():
-                        return
-                    log.warning(
-                        "HDMI-CEC standby was not acknowledged; re-checking "
-                        "power state before the Wi-Fi fallback."
-                    )
-                    state_after = tvlib.get_tv_power_state(
-                        self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
-                    )
-                    if cancel.is_set():
-                        return
-                    if state_after in ("standby", "to-standby"):
-                        self._mark_commanded_off()
-                        log.info(
-                            "[*] TV reached %s despite the missing CEC "
-                            "acknowledgment; skipping the WebSocket toggle.",
-                            state_after,
-                        )
-                        return
-                    log.warning(
-                        "Falling back to Wi-Fi WebSocket for TV standby."
-                    )
+                log.info("[*] Sending discrete standby to TV (%s)...", reason)
+            else:
+                log.info("[*] Sending sleep command to TV (%s)...", reason)
 
-            # The warm socket is sourced from Wi-Fi, so it outlives the dock
-            # removal. Use it before any probe or reconnect work.
-            if self.tv_link.warm and self.tv_link.send_key(
-                "KEY_POWER", timeout=2.5, cancel=cancel
+            should_abort = None
+            if undock:
+                should_abort = (
+                    lambda: self.read_external_display_status() == "connected"
+                )
+            if self.backend.standby(
+                cancel=cancel,
+                undock=undock,
+                reason=reason,
+                should_abort=should_abort,
             ):
                 self._mark_commanded_off()
-                log.info(
-                    "[*] TV sleep command delivered on the warm channel (%s).",
-                    reason,
-                )
+                log.info("[*] TV sleep command delivered (%s).", reason)
                 return
             if cancel.is_set():
                 return
-
-            attempts = 20 if undock else 4
-            for attempt in range(1, attempts + 1):
-                if cancel.is_set():
-                    return
-                if undock and self.read_external_display_status() == "connected":
-                    log.info(
-                        "[*] Dock reconnected during Wi-Fi sleep retry; "
-                        "aborting sleep."
-                    )
-                    return
-                # A short probe keeps failed attempts cheap while Wi-Fi route
-                # failover settles; a reachable LAN answers in under a few ms.
-                if tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.25):
-                    if self.tv_link.send_key(
-                        "KEY_POWER", timeout=2.5, cancel=cancel
-                    ):
-                        self._mark_commanded_off()
-                        log.info(
-                            "[*] TV sleep command delivered over Wi-Fi on "
-                            "attempt %d/%d (%s).",
-                            attempt,
-                            attempts,
-                            reason,
-                        )
-                        return
-                if attempt < attempts and cancel.wait(0.25):
-                    return
-
             log.info(
-                "[*] Could not reach TV over Wi-Fi after %d attempts (%s); "
-                "TV may already be off.",
-                attempts,
+                "[*] Could not deliver TV sleep command (%s); TV may already "
+                "be off.",
                 reason,
             )
         except Exception:
             log.exception("Error while sending TV sleep command (%s)", reason)
         finally:
             self._finish_intent(intent)
-
-    def _confirm_sleep(self, cancel: threading.Event) -> bool:
-        """Confirm an acknowledged CEC standby actually reaches standby.
-
-        cec-ctl can return success while Tizen ignores the message, so watch
-        the CEC power state briefly. A missing reply is normal once the TV
-        powers down; a persistent 'on' is not.
-        """
-        for attempt in range(1, 4):
-            if cancel.wait(1.0):
-                return False
-            state = self.cec.power_state(cancel)
-            if cancel.is_set():
-                return False
-            if state in ("standby", "to-standby"):
-                log.info("[*] TV confirmed '%s' via HDMI-CEC.", state)
-                return True
-            if state not in ("on", "to-on"):
-                log.debug(
-                    "No CEC power state after standby; assuming the TV is "
-                    "powering down."
-                )
-                return True
-            log.warning(
-                "[!] TV still reports '%s' after standby (attempt %d/3).",
-                state,
-                attempt,
-            )
-            if attempt < 3 and self.cec.standby(cancel):
-                log.info("[*] Re-sent HDMI-CEC standby.")
-        return False
 
     # ------------------------------------------------------------------
     # Wake path
@@ -902,8 +812,9 @@ class TVPowerSyncDaemon:
         log.info("--> [DECISIVE WAKE] (%s)", reason)
 
         # Respect the TV's shutdown settling window. A reported "on" is not
-        # trustworthy while Tizen is still shutting down (port 8001 can linger
-        # for several seconds), so a recent off forces the full wake sequence.
+        # trustworthy while the TV is still shutting down (its control port
+        # can linger for several seconds), so a recent off forces the full
+        # wake sequence.
         elapsed = self._recent_off_elapsed()
         recent_off = elapsed is not None and elapsed < OFF_GUARD_SECONDS
         if elapsed is not None and elapsed < SETTLE_SECONDS:
@@ -934,9 +845,7 @@ class TVPowerSyncDaemon:
                 elapsed,
             )
         else:
-            tv_state = tvlib.get_tv_power_state(
-                self.cec, self.config.tv_ip, use_cec=True, cancel=cancel
-            )
+            tv_state = self.backend.power_state(cancel=cancel)
             if cancel.is_set():
                 return False
             if tv_state in ("on", "to-on"):
@@ -954,20 +863,12 @@ class TVPowerSyncDaemon:
                     tv_state,
                 )
 
-        log.info("Broadcasting rapid Wake-on-LAN burst (5 packets) across all NICs...")
-        tvlib.send_wol(
-            self.config.tv_mac,
-            self.config.tv_ip,
-            bursts=5,
-            delay_between=0.05,
-            cancel=cancel,
-        )
-        if cancel.is_set():
-            return False
-
-        if not self.cec.wake(cancel):
+        log.info("[*] Sending %s wake sequence...", self.backend.name)
+        if not self.backend.wake(cancel):
             log.warning(
-                "CEC wake command did not succeed; continuing with verification."
+                "%s wake command did not report success; continuing with "
+                "verification.",
+                self.backend.name,
             )
         if cancel.is_set():
             return False
@@ -983,20 +884,22 @@ class TVPowerSyncDaemon:
                 return False
 
             log.info("Wake attempt %d/10: waiting for TV...", attempt)
-            current_state = tvlib.get_tv_power_state(
-                self.cec,
-                self.config.tv_ip,
-                use_cec=True,
+            current_state = self.backend.power_state(
                 cancel=cancel,
-                # TCP alone is not proof of a usable display: Tizen can keep
-                # port 8001 open in standby or while the HDMI input is idle.
+                # A reachable control port is not proof of a usable display:
+                # the TV can keep it open in standby or while HDMI is idle.
                 allow_network_fallback=False,
             )
             if cancel.is_set():
                 return False
             edid_ready = tvlib.external_edid_present()
-            network_ready = tvlib.is_tv_network_awake(
-                self.config.tv_ip, timeout=0.4
+            network_ready = bool(
+                self.backend.probe_port
+                and tvlib.is_tv_network_awake(
+                    self.config.tv_ip,
+                    timeout=0.4,
+                    port=self.backend.probe_port,
+                )
             )
             if edid_ready and (
                 current_state in ("on", "to-on") or network_ready
@@ -1016,20 +919,16 @@ class TVPowerSyncDaemon:
                     current_state,
                 )
 
-            tvlib.send_wol(
-                self.config.tv_mac,
-                self.config.tv_ip,
-                bursts=4,
-                delay_between=0.05,
-                cancel=cancel,
-            )
+            # A full wake can block this loop for ~3s (CEC/ADB); the TV
+            # usually needs only the initial command, so retry the full
+            # sequence every third attempt and use the cheap nudge between.
+            if attempt % 3 == 0:
+                if not self.backend.wake(cancel):
+                    log.debug("Wake retry %d did not report success.", attempt)
+            else:
+                self.backend.nudge(cancel)
             if cancel.is_set():
                 return False
-            # Re-sending the full CEC wake blocks this loop for ~3s; the TV
-            # usually needs only the initial command, so retry every third
-            # attempt and keep polling in between.
-            if attempt % 3 == 0 and not self.cec.wake(cancel):
-                log.debug("CEC wake retry %d did not succeed.", attempt)
 
         log.warning("[!] Decisive wake did not detect the TV awake after 10 attempts.")
         return False
@@ -1050,8 +949,10 @@ class TVPowerSyncDaemon:
                 "No active external connector found; skipping kscreen-doctor "
                 "mode re-assert."
             )
-        if not self.cec.wake(cancel):
-            log.warning("CEC wake/active-source command did not succeed.")
+        if not self.backend.active_source(cancel):
+            log.warning(
+                "%s active-source command did not succeed.", self.backend.name
+            )
 
     def ensure_dpms_on(self) -> None:
         current = self.read_hardware_dpms()
@@ -1178,8 +1079,10 @@ def main() -> int:
         return 2
 
     log.info(
-        "Starting Samsung TV Power Synchronization Daemon v%s (event-driven)...",
+        "Starting TVPowerSync Daemon v%s (backend: %s, "
+        "event-driven)...",
         tvlib.__version__,
+        config.backend,
     )
 
     DBusGMainLoop(set_as_default=True)
@@ -1262,7 +1165,7 @@ def main() -> int:
     )
     loop.run()
     daemon._keepalive_stop.set()
-    daemon.tv_link.close()
+    daemon.backend.close()
     return 0
 
 

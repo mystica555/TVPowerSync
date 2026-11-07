@@ -1,15 +1,17 @@
 # Detailed Architecture & Technical Reference
 
 This document explains the hardware topology, protocols, event sources, state
-machine and edge-case mitigations of **TizenPowerSync**.
+machine and edge-case mitigations of **TVPowerSync**.
 
 ---
 
 ## 1. System Overview & Hardware Topology
 
-The suite synchronizes power, input selection and the video link of a
-**Samsung Tizen Smart TV (`UN40KU7000`)** used as a **4K60 UHD** external
-monitor for a Linux laptop running **KDE Plasma 6 (Wayland)**.
+The suite synchronizes power, input selection and the video link of a TV used
+as a **4K60 UHD** external monitor for a Linux laptop running **KDE Plasma 6
+(Wayland)**. Samsung Tizen is the reference backend; the same daemon also
+drives generic HDMI-CEC, Roku ECP, Android TV Remote v2 and Fire TV ADB
+backends.
 
 ### Hardware & Interface Stack
 - **Internal Display (`eDP-1`)**: laptop panel (`2880x1800 @ 60Hz`, scale
@@ -133,7 +135,7 @@ to running `drm_info -j` when the file is missing.
 ### 2.5 `pair_samsung_tv.py`
 
 One-off WebSocket pairing helper (ports 8002/8001). Uses `TV_IP` and writes the
-token to `TV_TOKEN_FILE` (default `~/.local/state/tizenpowersync/tv_token.txt`).
+token to `TV_TOKEN_FILE` (default `~/.local/state/tvpowersync/tv_token.txt`).
 
 ### 2.6 `udev/70-cec-uaccess.rules`
 
@@ -146,9 +148,30 @@ Grants the active desktop user access to `/dev/cec0` without root.
 ### 2.7 `tvlib.py`
 
 Shared config, logging, WoL, CEC, WebSocket, DRM-sysfs and backoff helpers. The
-daemon, CLI and boot service all import it, so `send_wol`, power-state parsing
-and connector discovery exist in exactly one place. `TvLink` holds the optional
-kept-warm remote-control WebSocket; `send_key` remains the one-shot fallback.
+daemon, CLI, boot service and backends all import it, so `send_wol`, power-state
+parsing and connector discovery exist in exactly one place. `TvLink` holds the
+optional kept-warm Samsung remote-control WebSocket; `send_key` remains the
+one-shot fallback.
+
+### 2.8 `tv_backends.py`
+
+Vendor power policy behind a single interface:
+
+```
+power_state(cancel, allow_network_fallback) -> on | standby | to-on | to-standby | offline
+wake(cancel) / nudge(cancel) -> one full attempt / a cheap repeat
+standby(cancel, undock, reason, should_abort) -> delivered?
+active_source(cancel) / keepalive() / close()
+```
+
+`TvBackend` supplies the CEC + WoL baseline; `CecBackend` is the vendor-neutral
+choice. `SamsungBackend` adds the Tizen WebSocket and the proven-toggle
+fallback. `RokuBackend` uses ECP (`/query/device-info`, `PowerOn`, `PowerOff`).
+`AndroidTvBackend` uses Android TV Remote v2 and expects `pair_android_tv.py` to
+have saved a client certificate. `FireTvBackend` uses ADB `dumpsys power` and
+key codes 223/224. All backends try CEC first when an adapter is configured;
+set `CEC_DEVICE=` to control a streaming box's own power instead of the TV it
+is connected to.
 
 ---
 
@@ -157,7 +180,9 @@ kept-warm remote-control WebSocket; `send_key` remains the one-shot fallback.
 ### 3.1 Decisive Wake (`_do_decisive_wake`)
 
 Triggered by dock connect, DPMS Off→On, lid open (docked), resume (docked,
-lid open) and the watchdog.
+lid open) and the watchdog. The protocol steps below describe the Samsung
+backend; the daemon contract is identical for every backend, which substitutes
+its own wake command and readiness probe.
 
 1. **Cancellation / connection guard** — abort if the intent was superseded or
    the external display is disconnected.
@@ -189,7 +214,9 @@ uses only discrete commands.
 
 ### 3.2 Sleep (`_power_off_worker`)
 
-Triggered by DPMS off, lid close, dock unplug and suspend.
+Triggered by DPMS off, lid close, dock unplug and suspend. The delivery-proof
+steps below are the Samsung backend's; Roku ECP, Android TV Remote and Fire TV
+ADB substitute their own switch-off command and confirmation.
 
 1. **Cancel any in-flight wake** via the new intent.
 2. **Cooldown** — skip if a sleep command was delivered less than 12s ago.
@@ -287,17 +314,24 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 | Variable | Default | Used by |
 | :--- | :--- | :--- |
 | `TV_IP` | `192.168.0.2` | daemon, CLI, boot, pairing |
-| `TV_MAC` | `40:16:3b:d0:4f:8b` | WoL |
-| `CEC_DEVICE` | `/dev/cec0` | daemon, CLI, boot |
+| `TV_MAC` | `40:16:3b:d0:4f:8b` | WoL (default only applies to the Samsung backend) |
+| `TV_BACKEND` | `samsung` | backend selection |
+| `CEC_DEVICE` | `/dev/cec0` | daemon, CLI, boot (empty disables CEC) |
+| `CEC_PHYS_ADDR` | `1.0.0.0` | CEC active-source address |
+| `TV_ECP_PORT` | `8060` | Roku ECP |
+| `TV_ADB_PORT` | `5555` | Fire TV ADB |
+| `ADB_BIN` | `adb` | Fire TV ADB executable |
+| `ANDROIDTV_CERT` / `ANDROIDTV_KEY` | `~/.local/state/tvpowersync/androidtv_*.pem` | Android TV pairing |
+| `ANDROIDTV_CLIENT_NAME` | `TVPowerSync` | Android TV pairing |
 | `TV_MODE` | `3840x2160@60` | mode re-assert |
 | `TV_LOG_LEVEL` | `INFO` | all scripts |
-| `TV_PYTHON` | `$XDG_DATA_HOME/tizenpowersync/venv/bin/python` | `deploy.sh` interpreter override |
-| `TV_TOKEN_FILE` | `~/.local/state/tizenpowersync/tv_token.txt` | pairing helper |
+| `TV_PYTHON` | `$XDG_DATA_HOME/tvpowersync/venv/bin/python` | `deploy.sh` interpreter override |
+| `TV_TOKEN_FILE` | `~/.local/state/tvpowersync/tv_token.txt` | pairing helper |
 | `TV_DRM_INFO` | `drm_info.json` (cwd) | `parse_drm_info` snapshot |
 
 [`deploy.sh`](README.md#deployment) keeps the venv outside the clone, at
-`$XDG_DATA_HOME/tizenpowersync/venv` (default
-`~/.local/share/tizenpowersync/venv`), so the checkout can be moved or deleted
+`$XDG_DATA_HOME/tvpowersync/venv` (default
+`~/.local/share/tvpowersync/venv`), so the checkout can be moved or deleted
 after deployment. When the venv is missing the script creates it with
 `--system-site-packages` and installs `samsungtvws`; `TV_PYTHON` overrides the
 interpreter. If an existing venv cannot see the system bindings it writes a

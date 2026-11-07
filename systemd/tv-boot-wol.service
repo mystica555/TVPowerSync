@@ -1,5 +1,5 @@
 [Unit]
-Description=Wake Samsung TV via WoL and HDMI-CEC at Boot
+Description=Wake TV via the configured power backend at Boot
 After=network.target network-online.target NetworkManager.service
 Wants=network-online.target
 Before=display-manager.service sddm.service
@@ -7,7 +7,8 @@ Before=display-manager.service sddm.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-# @PYTHON@ and @BIN_DIR@ are substituted by deploy.sh for the installing user.
+# @PYTHON@, @BIN_DIR@ and @TV_BACKEND@ are substituted by deploy.sh.
+Environment=TV_BACKEND=@TV_BACKEND@
 ExecStart=@PYTHON@ @BIN_DIR@/boot_wol.py
 TimeoutSec=10
 

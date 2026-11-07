@@ -5,20 +5,48 @@ set -euo pipefail
 XDG_BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 SYSTEMD_USER_DIR="$XDG_CONFIG_HOME/systemd/user"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The venv lives in the user's data directory, not in the clone, so the
 # installation survives moving or deleting the checkout.
-APP_DATA_DIR="$XDG_DATA_HOME/tizenpowersync"
+APP_DATA_DIR="$XDG_DATA_HOME/tvpowersync"
+STATE_DIR="$XDG_STATE_HOME/tvpowersync"
+LEGACY_APP_DATA_DIR="$XDG_DATA_HOME/tizenpowersync"
+LEGACY_STATE_DIR="$XDG_STATE_HOME/tizenpowersync"
 VENV_DIR="$APP_DATA_DIR/venv"
 
-echo "=== Deploying TizenPowerSync (XDG Compliant) ==="
+# Preserve an existing installation across the project rename.
+if [[ -d "$LEGACY_APP_DATA_DIR" && ! -e "$APP_DATA_DIR" ]]; then
+    mv "$LEGACY_APP_DATA_DIR" "$APP_DATA_DIR"
+    echo "Migrated data directory: $LEGACY_APP_DATA_DIR -> $APP_DATA_DIR"
+fi
+if [[ -d "$LEGACY_STATE_DIR" && ! -e "$STATE_DIR" ]]; then
+    mv "$LEGACY_STATE_DIR" "$STATE_DIR"
+    echo "Migrated state directory: $LEGACY_STATE_DIR -> $STATE_DIR"
+fi
+
+# Persist the selected backend in the user and boot units. The default keeps
+# an existing Samsung installation unchanged.
+TV_BACKEND_VALUE="${TV_BACKEND:-samsung}"
+case "$TV_BACKEND_VALUE" in
+    cec|samsung|roku|androidtv|firetv) ;;
+    *)
+        echo "Error: unsupported TV_BACKEND '$TV_BACKEND_VALUE'." >&2
+        echo "       Choose cec, samsung, roku, androidtv or firetv." >&2
+        exit 2
+        ;;
+esac
+
+echo "=== Deploying TVPowerSync (XDG Compliant) ==="
 echo "Target Bin Dir     : $XDG_BIN_HOME"
 echo "Target Config Dir  : $XDG_CONFIG_HOME"
 echo "Target Data Dir    : $APP_DATA_DIR"
+echo "Target State Dir   : $STATE_DIR"
 echo "Systemd User Dir   : $SYSTEMD_USER_DIR"
 echo "Virtualenv         : $VENV_DIR"
+echo "TV backend         : $TV_BACKEND_VALUE"
 
 # 0. Pick the interpreter that can import both the system bindings (dbus/gi)
 #    and samsungtvws. A venv that only contains samsungtvws is repaired by
@@ -96,6 +124,17 @@ ensure_samsungtvws() {
     return 0
 }
 
+ensure_androidtvremote2() {
+    local venv_py="$1"
+    "$venv_py" -c 'import androidtvremote2' >/dev/null 2>&1 && return 0
+    echo "  Installing androidtvremote2 into $venv_py..."
+    if "$venv_py" -m pip install --quiet --disable-pip-version-check androidtvremote2; then
+        return 0
+    fi
+    echo "  Warning: pip could not install androidtvremote2; the Android TV backend will be disabled."
+    return 0
+}
+
 create_venv() {
     local target="$1" system_py="$2"
     mkdir -p "$(dirname "$target")"
@@ -106,6 +145,7 @@ create_venv() {
         return 1
     fi
     ensure_samsungtvws "$target/bin/python"
+    ensure_androidtvremote2 "$target/bin/python"
 }
 
 PYTHON_BIN="${TV_PYTHON:-}"
@@ -144,7 +184,10 @@ fi
 
 # The managed venv is reused, but still gets the pip dependency.
 case "$PYTHON_BIN" in
-    "$VENV_DIR/bin/python") ensure_samsungtvws "$PYTHON_BIN" ;;
+    "$VENV_DIR/bin/python")
+        ensure_samsungtvws "$PYTHON_BIN"
+        ensure_androidtvremote2 "$PYTHON_BIN"
+        ;;
 esac
 
 # Make the path absolute without resolving the venv's python symlink (resolving
@@ -166,7 +209,7 @@ mkdir -p "$SYSTEMD_USER_DIR"
 
 # 2. Deploy user executables and the shared helper module
 echo -e "\n[*] Installing user executables to $XDG_BIN_HOME..."
-SCRIPTS=(control_tv.py tv_power_daemon.py boot_wol.py parse_drm_info.py pair_samsung_tv.py)
+SCRIPTS=(control_tv.py tv_power_daemon.py boot_wol.py parse_drm_info.py pair_samsung_tv.py pair_android_tv.py)
 
 for script in "${SCRIPTS[@]}"; do
     install -m 755 "$REPO_DIR/$script" "$XDG_BIN_HOME/$script"
@@ -179,12 +222,15 @@ for script in "${SCRIPTS[@]}"; do
 done
 install -m 644 "$REPO_DIR/tvlib.py" "$XDG_BIN_HOME/tvlib.py"
 echo "  Installed: $XDG_BIN_HOME/tvlib.py"
+install -m 644 "$REPO_DIR/tv_backends.py" "$XDG_BIN_HOME/tv_backends.py"
+echo "  Installed: $XDG_BIN_HOME/tv_backends.py"
 install -m 644 "$REPO_DIR/VERSION" "$XDG_BIN_HOME/VERSION"
 echo "  Installed: $XDG_BIN_HOME/VERSION ($(cat "$REPO_DIR/VERSION"))"
 
 # 3. Deploy systemd user service, substituting the interpreter path
 echo -e "\n[*] Deploying systemd user service..."
-sed "s|@PYTHON@|$PYTHON_BIN|g" \
+sed -e "s|@PYTHON@|$PYTHON_BIN|g" \
+    -e "s|@TV_BACKEND@|$TV_BACKEND_VALUE|g" \
     "$REPO_DIR/systemd/tv-power-sync.service" \
     > "$SYSTEMD_USER_DIR/tv-power-sync.service"
 systemctl --user daemon-reload
@@ -198,7 +244,9 @@ if command -v sudo >/dev/null 2>&1; then
     # The boot unit runs as root, so %h would be /root; substitute the real
     # interpreter and bin directory instead.
     BOOT_UNIT_TMP="$(mktemp)"
-    sed -e "s|@PYTHON@|$PYTHON_BIN|g" -e "s|@BIN_DIR@|$XDG_BIN_HOME|g" \
+    sed -e "s|@PYTHON@|$PYTHON_BIN|g" \
+        -e "s|@BIN_DIR@|$XDG_BIN_HOME|g" \
+        -e "s|@TV_BACKEND@|$TV_BACKEND_VALUE|g" \
         "$REPO_DIR/systemd/tv-boot-wol.service" > "$BOOT_UNIT_TMP"
     sudo install -m 644 "$BOOT_UNIT_TMP" /etc/systemd/system/tv-boot-wol.service
     rm -f "$BOOT_UNIT_TMP"
