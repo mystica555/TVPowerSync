@@ -31,10 +31,10 @@ fi
 # an existing Samsung installation unchanged.
 TV_BACKEND_VALUE="${TV_BACKEND:-samsung}"
 case "$TV_BACKEND_VALUE" in
-    cec|samsung|roku|androidtv|firetv) ;;
+    cec|samsung|roku|androidtv|firetv|lg|vizio) ;;
     *)
         echo "Error: unsupported TV_BACKEND '$TV_BACKEND_VALUE'." >&2
-        echo "       Choose cec, samsung, roku, androidtv or firetv." >&2
+        echo "       Choose cec, samsung, roku, androidtv, firetv, lg or vizio." >&2
         exit 2
         ;;
 esac
@@ -135,6 +135,28 @@ ensure_androidtvremote2() {
     return 0
 }
 
+ensure_aiowebostv() {
+    local venv_py="$1"
+    "$venv_py" -c 'import aiowebostv' >/dev/null 2>&1 && return 0
+    echo "  Installing aiowebostv into $venv_py..."
+    if "$venv_py" -m pip install --quiet --disable-pip-version-check aiowebostv; then
+        return 0
+    fi
+    echo "  Warning: pip could not install aiowebostv; the LG webOS backend will be disabled."
+    return 0
+}
+
+ensure_vizaio() {
+    local venv_py="$1"
+    "$venv_py" -c 'import vizaio' >/dev/null 2>&1 && return 0
+    echo "  Installing vizaio into $venv_py..."
+    if "$venv_py" -m pip install --quiet --disable-pip-version-check vizaio; then
+        return 0
+    fi
+    echo "  Warning: pip could not install vizaio; the Vizio SmartCast backend will be disabled."
+    return 0
+}
+
 create_venv() {
     local target="$1" system_py="$2"
     mkdir -p "$(dirname "$target")"
@@ -146,6 +168,8 @@ create_venv() {
     fi
     ensure_samsungtvws "$target/bin/python"
     ensure_androidtvremote2 "$target/bin/python"
+    ensure_aiowebostv "$target/bin/python"
+    ensure_vizaio "$target/bin/python"
 }
 
 PYTHON_BIN="${TV_PYTHON:-}"
@@ -187,6 +211,8 @@ case "$PYTHON_BIN" in
     "$VENV_DIR/bin/python")
         ensure_samsungtvws "$PYTHON_BIN"
         ensure_androidtvremote2 "$PYTHON_BIN"
+        ensure_aiowebostv "$PYTHON_BIN"
+        ensure_vizaio "$PYTHON_BIN"
         ;;
 esac
 
@@ -200,8 +226,11 @@ if ! "$PYTHON_BIN" -c 'import dbus, gi' >/dev/null 2>&1; then
     echo "       Install python3-dbus/python3-gi, or create the venv with --system-site-packages." >&2
     exit 1
 fi
-"$PYTHON_BIN" -c 'import samsungtvws' >/dev/null 2>&1 \
-    || echo "  Warning: $PYTHON_BIN cannot import samsungtvws; Wi-Fi TV control will be disabled."
+for module in samsungtvws androidtvremote2 aiowebostv vizaio; do
+    if ! "$PYTHON_BIN" -c "import $module" >/dev/null 2>&1; then
+        echo "  Warning: $PYTHON_BIN cannot import $module; that vendor backend may be disabled."
+    fi
+done
 
 # 1. Ensure target directories exist
 mkdir -p "$XDG_BIN_HOME"
@@ -209,7 +238,7 @@ mkdir -p "$SYSTEMD_USER_DIR"
 
 # 2. Deploy user executables and the shared helper module
 echo -e "\n[*] Installing user executables to $XDG_BIN_HOME..."
-SCRIPTS=(control_tv.py tv_power_daemon.py boot_wol.py parse_drm_info.py pair_samsung_tv.py pair_android_tv.py)
+SCRIPTS=(control_tv.py tv_power_daemon.py boot_wol.py parse_drm_info.py pair_samsung_tv.py pair_android_tv.py pair_lg_tv.py pair_vizio_tv.py)
 
 for script in "${SCRIPTS[@]}"; do
     install -m 755 "$REPO_DIR/$script" "$XDG_BIN_HOME/$script"

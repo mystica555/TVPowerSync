@@ -21,6 +21,8 @@ standby when an adapter is available. Vendor APIs are layered on top:
     roku      CEC + Roku ECP on port 8060.
     androidtv CEC + Android TV Remote protocol v2 (optional dependency).
     firetv    CEC + ADB (Fire TV / Fire TV Edition televisions).
+    lg        CEC + LG webOS WebSocket/SSAP (optional dependency).
+    vizio     CEC + Vizio SmartCast HTTPS API (optional dependency).
 
 Backends are selected with TV_BACKEND. Samsung is the default so an existing
 installation keeps its current behaviour.
@@ -66,6 +68,15 @@ def _wait_or_cancel(cancel: Optional[threading.Event], seconds: float) -> bool:
         time.sleep(seconds)
         return False
     return cancel.wait(seconds)
+
+
+def _read_secret(path: str) -> Optional[str]:
+    """Read a one-line pairing secret, returning None if it is absent."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return handle.read().strip() or None
+    except OSError:
+        return None
 
 
 def _parse_android_power_status(output: str) -> Optional[str]:
@@ -651,6 +662,264 @@ class AndroidTvBackend(TvBackend):
         return False
 
 
+class WebOsBackend(TvBackend):
+    """LG webOS: CEC plus the WebSocket/SSAP remote-control API."""
+
+    name = "lg"
+    description = "LG webOS WebSocket + HDMI-CEC"
+    probe_port = 3000
+
+    def __init__(self, config: tvlib.Config) -> None:
+        super().__init__(config)
+        self._lock = threading.Lock()
+        self._missing_logged = False
+
+    def _module(self):
+        try:
+            import aiowebostv
+        except ImportError:
+            if not self._missing_logged:
+                log.warning(
+                    "aiowebostv is not installed; install it to use the LG "
+                    "webOS backend (pip install aiowebostv)."
+                )
+                self._missing_logged = True
+            return None
+        return aiowebostv
+
+    def _client_key(self) -> Optional[str]:
+        key = _read_secret(self.config.lg_client_key_file)
+        if key is None and not self._missing_logged:
+            log.warning(
+                "LG webOS client key not found. Run pair_lg_tv.py first "
+                "(looked for %s).",
+                self.config.lg_client_key_file,
+            )
+            self._missing_logged = True
+        return key
+
+    def _run(self, action: str, should_abort: SleepCheck = None) -> Optional[bool]:
+        module = self._module()
+        key = self._client_key()
+        if module is None or key is None:
+            return None
+
+        async def _worker():
+            client = module.WebOsClient(
+                self.config.tv_ip, key, connect_timeout=3.0
+            )
+            try:
+                if not await client.connect():
+                    return None
+                if action == "state":
+                    return bool(client.tv_state.is_on)
+                if action == "off":
+                    if should_abort is not None and should_abort():
+                        return False
+                    if not client.tv_state.is_on:
+                        return True
+                    await client.power_off()
+                    return True
+                return None
+            finally:
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
+                try:
+                    await client.close_client_session()
+                except Exception:
+                    pass
+
+        with self._lock:
+            try:
+                return asyncio.run(_worker())
+            except Exception as exc:
+                log.debug("LG webOS %s command failed: %s", action, exc)
+                return None
+
+    def power_state(
+        self,
+        cancel: Optional[threading.Event] = None,
+        allow_network_fallback: bool = True,
+    ) -> str:
+        if self.cec is not None:
+            state = self.cec.power_state(cancel)
+            if state in tvlib.KNOWN_POWER_STATES:
+                return state
+        if cancel is not None and cancel.is_set():
+            return "offline"
+        state = self._run("state")
+        if state is None:
+            return "offline"
+        return "on" if state else "standby"
+
+    def standby(
+        self,
+        cancel: Optional[threading.Event] = None,
+        undock: bool = False,
+        reason: str = "",
+        should_abort: SleepCheck = None,
+    ) -> bool:
+        if not undock and self.cec is not None:
+            log.info("[*] Sending HDMI-CEC standby to TV (%s)...", reason)
+            if self.cec.standby(cancel):
+                log.info("[*] TV acknowledged HDMI-CEC standby (%s).", reason)
+                if self._confirm_cec_standby(cancel):
+                    return True
+                if cancel is not None and cancel.is_set():
+                    return False
+                log.warning(
+                    "CEC standby did not land; falling back to LG webOS."
+                )
+            else:
+                log.warning(
+                    "HDMI-CEC standby was not acknowledged; falling back to "
+                    "LG webOS."
+                )
+
+        if cancel is not None and cancel.is_set():
+            return False
+        if should_abort is not None and should_abort():
+            log.info("[*] Dock reconnected during LG sleep; aborting sleep.")
+            return False
+        if self._run("off", should_abort):
+            log.info("[*] TV sleep command delivered via LG webOS (%s).", reason)
+            return True
+        log.info("[*] Could not reach LG webOS to deliver standby (%s).", reason)
+        return False
+
+
+class VizioBackend(TvBackend):
+    """Vizio SmartCast: CEC plus the local HTTPS control API."""
+
+    name = "vizio"
+    description = "Vizio SmartCast + HDMI-CEC"
+
+    def __init__(self, config: tvlib.Config) -> None:
+        super().__init__(config)
+        self.probe_port = config.vizio_port
+        self._lock = threading.Lock()
+        self._missing_logged = False
+
+    def _module(self):
+        try:
+            import vizaio
+        except ImportError:
+            if not self._missing_logged:
+                log.warning(
+                    "vizaio is not installed; install it to use the Vizio "
+                    "SmartCast backend (pip install vizaio)."
+                )
+                self._missing_logged = True
+            return None
+        return vizaio
+
+    def _token(self) -> Optional[str]:
+        token = _read_secret(self.config.vizio_token_file)
+        if token is None and not self._missing_logged:
+            log.warning(
+                "Vizio SmartCast auth token not found. Run "
+                "pair_vizio_tv.py first (looked for %s).",
+                self.config.vizio_token_file,
+            )
+            self._missing_logged = True
+        return token
+
+    def _run(self, action: str, should_abort: SleepCheck = None) -> Optional[bool]:
+        module = self._module()
+        token = self._token()
+        if module is None or token is None:
+            return None
+
+        host = f"{self.config.tv_ip}:{self.config.vizio_port}"
+
+        async def _worker():
+            device = module.Vizio(
+                host,
+                device_type=module.DeviceType.TV,
+                auth_token=token,
+                timeout=2.0,
+                command_timeout=4.0,
+            )
+            try:
+                if action == "state":
+                    return bool(await device.get_power_state())
+                if action == "off":
+                    if should_abort is not None and should_abort():
+                        return False
+                    await device.power_off()
+                    return True
+                return None
+            finally:
+                try:
+                    await device.aclose()
+                except Exception:
+                    pass
+
+        with self._lock:
+            try:
+                return asyncio.run(_worker())
+            except Exception as exc:
+                log.debug("Vizio SmartCast %s command failed: %s", action, exc)
+                return None
+
+    def power_state(
+        self,
+        cancel: Optional[threading.Event] = None,
+        allow_network_fallback: bool = True,
+    ) -> str:
+        if self.cec is not None:
+            state = self.cec.power_state(cancel)
+            if state in tvlib.KNOWN_POWER_STATES:
+                return state
+        if cancel is not None and cancel.is_set():
+            return "offline"
+        state = self._run("state")
+        if state is None:
+            return "offline"
+        return "on" if state else "standby"
+
+    def standby(
+        self,
+        cancel: Optional[threading.Event] = None,
+        undock: bool = False,
+        reason: str = "",
+        should_abort: SleepCheck = None,
+    ) -> bool:
+        if not undock and self.cec is not None:
+            log.info("[*] Sending HDMI-CEC standby to TV (%s)...", reason)
+            if self.cec.standby(cancel):
+                log.info("[*] TV acknowledged HDMI-CEC standby (%s).", reason)
+                if self._confirm_cec_standby(cancel):
+                    return True
+                if cancel is not None and cancel.is_set():
+                    return False
+                log.warning(
+                    "CEC standby did not land; falling back to Vizio "
+                    "SmartCast."
+                )
+            else:
+                log.warning(
+                    "HDMI-CEC standby was not acknowledged; falling back to "
+                    "Vizio SmartCast."
+                )
+
+        if cancel is not None and cancel.is_set():
+            return False
+        if should_abort is not None and should_abort():
+            log.info("[*] Dock reconnected during Vizio sleep; aborting sleep.")
+            return False
+        if self._run("off", should_abort):
+            log.info(
+                "[*] TV sleep command delivered via Vizio SmartCast (%s).",
+                reason,
+            )
+            return True
+        log.info("[*] Could not reach Vizio SmartCast to deliver standby (%s).", reason)
+        return False
+
+
 class FireTvBackend(TvBackend):
     """Fire TV / Fire TV Edition control over ADB."""
 
@@ -832,9 +1101,17 @@ _BACKENDS = {
     "roku": RokuBackend,
     "androidtv": AndroidTvBackend,
     "firetv": FireTvBackend,
+    "lg": WebOsBackend,
+    "vizio": VizioBackend,
 }
 
-_ALIASES = {"android": "androidtv", "fire": "firetv", "fire_tv": "firetv"}
+_ALIASES = {
+    "android": "androidtv",
+    "fire": "firetv",
+    "fire_tv": "firetv",
+    "webos": "lg",
+    "smartcast": "vizio",
+}
 
 
 def create_backend(config: tvlib.Config) -> TvBackend:

@@ -9,7 +9,7 @@ one place.
 Configuration is read from the environment (all optional):
   TV_IP         TV address                (default 192.168.0.2)
   TV_MAC        TV MAC address            (default 40:16:3b:d0:4f:8b)
-  TV_BACKEND    Power backend             (samsung, cec, roku, androidtv, firetv)
+  TV_BACKEND    Power backend             (samsung, cec, roku, androidtv, firetv, lg, vizio)
   CEC_DEVICE    HDMI-CEC adapter          (default /dev/cec0; empty disables CEC)
   CEC_PHYS_ADDR CEC physical address      (default 1.0.0.0)
   TV_MODE       Native mode for kscreen   (default 3840x2160@60)
@@ -43,7 +43,10 @@ DEFAULT_TV_MODE = "3840x2160@60"
 DEFAULT_TV_BACKEND = "samsung"
 DEFAULT_ECP_PORT = 8060
 DEFAULT_ADB_PORT = 5555
-TV_BACKENDS = frozenset({"cec", "samsung", "roku", "androidtv", "firetv"})
+DEFAULT_VIZIO_PORT = 7345
+TV_BACKENDS = frozenset(
+    {"cec", "samsung", "roku", "androidtv", "firetv", "lg", "vizio"}
+)
 TV_WS_PORT = 8001
 _WS_NAME_B64 = base64.b64encode(b"SamsungTvRemote").decode("ascii")
 _STATE_HOME = os.environ.get(
@@ -55,6 +58,13 @@ DEFAULT_ANDROIDTV_CERT = os.path.join(
 DEFAULT_ANDROIDTV_KEY = os.path.join(
     _STATE_HOME, "tvpowersync", "androidtv_key.pem"
 )
+DEFAULT_LG_CLIENT_KEY = os.path.join(
+    _STATE_HOME, "tvpowersync", "lg_client_key.txt"
+)
+DEFAULT_VIZIO_TOKEN = os.path.join(
+    _STATE_HOME, "tvpowersync", "vizio_token.txt"
+)
+VIZIO_DEVICE_ID = "tvpowersync"
 
 KNOWN_POWER_STATES = frozenset({"on", "standby", "to-on", "to-standby"})
 
@@ -141,6 +151,9 @@ class Config:
     androidtv_cert: str = DEFAULT_ANDROIDTV_CERT
     androidtv_key: str = DEFAULT_ANDROIDTV_KEY
     androidtv_client_name: str = "TVPowerSync"
+    lg_client_key_file: str = DEFAULT_LG_CLIENT_KEY
+    vizio_token_file: str = DEFAULT_VIZIO_TOKEN
+    vizio_port: int = DEFAULT_VIZIO_PORT
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -200,6 +213,15 @@ class Config:
                 "ANDROIDTV_CLIENT_NAME", "TVPowerSync"
             ).strip()
             or "TVPowerSync",
+            lg_client_key_file=os.environ.get(
+                "LG_CLIENT_KEY_FILE", DEFAULT_LG_CLIENT_KEY
+            ).strip()
+            or DEFAULT_LG_CLIENT_KEY,
+            vizio_token_file=os.environ.get(
+                "VIZIO_TOKEN_FILE", DEFAULT_VIZIO_TOKEN
+            ).strip()
+            or DEFAULT_VIZIO_TOKEN,
+            vizio_port=_env_port("TV_VIZIO_PORT", DEFAULT_VIZIO_PORT),
         )
 
 

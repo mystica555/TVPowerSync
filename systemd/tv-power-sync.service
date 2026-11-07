@@ -7,7 +7,7 @@ PartOf=plasma-workspace.target
 Type=simple
 # WAYLAND_DISPLAY is imported from the graphical session; do not hardcode it.
 Environment=QT_QPA_PLATFORM=wayland
-# @TV_BACKEND@ is substituted by deploy.sh (samsung, cec, roku, androidtv, firetv).
+# @TV_BACKEND@ is substituted by deploy.sh (samsung, cec, roku, androidtv, firetv, lg, vizio).
 Environment=TV_BACKEND=@TV_BACKEND@
 # @PYTHON@ is substituted by deploy.sh with the venv interpreter.
 ExecStart=@PYTHON@ %h/.local/bin/tv_power_daemon.py

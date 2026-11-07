@@ -10,8 +10,8 @@ machine and edge-case mitigations of **TVPowerSync**.
 The suite synchronizes power, input selection and the video link of a TV used
 as a **4K60 UHD** external monitor for a Linux laptop running **KDE Plasma 6
 (Wayland)**. Samsung Tizen is the reference backend; the same daemon also
-drives generic HDMI-CEC, Roku ECP, Android TV Remote v2 and Fire TV ADB
-backends.
+drives generic HDMI-CEC, Roku ECP, Android TV Remote v2, Fire TV ADB, LG webOS
+and Vizio SmartCast backends.
 
 ### Hardware & Interface Stack
 - **Internal Display (`eDP-1`)**: laptop panel (`2880x1800 @ 60Hz`, scale
@@ -103,8 +103,8 @@ wake” with “sleep now” and could not stop an in-flight sleep retry.
 6. **Watchdog (5-second GLib timer, worker-thread check)**
    - Preconditions: state `awake`, panel DPMS `On`, dock `connected`, lid open,
      no active wake, backoff expired.
-   - Probes TCP `8001` first (no subprocess). Only when the port is closed does
-     it query CEC.
+   - Probes the selected backend's control port first (no subprocess). Only
+     when the port is closed does it query CEC.
    - A CEC `standby`/`to-standby` reading wakes immediately; `offline` requires
      two consecutive checks. The dock state is re-read after the query so an
      unplug during the check cannot trigger a false wake.
@@ -122,8 +122,9 @@ three WoL bursts plus CEC `IMAGE_VIEW_ON` + `ACTIVE_SOURCE`.
 ### 2.3 `control_tv.py`
 
 Manual CLI for `status`, `wake`, `standby` and `wol`. Standby follows the same
-single-path rule as the daemon: CEC standby when docked, WebSocket `KEY_POWER`
-only as a fallback. All commands use list-form `subprocess` calls (no shell).
+single-path rule as the daemon: CEC standby when docked, then the selected
+backend's network fallback (WebSocket, ECP, ADB, or vendor API). All commands
+use list-form `subprocess` calls (no shell).
 
 ### 2.4 `parse_drm_info.py`
 
@@ -169,9 +170,27 @@ choice. `SamsungBackend` adds the Tizen WebSocket and the proven-toggle
 fallback. `RokuBackend` uses ECP (`/query/device-info`, `PowerOn`, `PowerOff`).
 `AndroidTvBackend` uses Android TV Remote v2 and expects `pair_android_tv.py` to
 have saved a client certificate. `FireTvBackend` uses ADB `dumpsys power` and
-key codes 223/224. All backends try CEC first when an adapter is configured;
-set `CEC_DEVICE=` to control a streaming box's own power instead of the TV it
-is connected to.
+key codes 223/224. `WebOsBackend` uses `aiowebostv`/SSAP and expects the client
+key saved by `pair_lg_tv.py`; `VizioBackend` uses `vizaio` and expects the auth
+token saved by `pair_vizio_tv.py`. Both use the vendor API for state and
+standby, and WoL/CEC for wake. All backends try CEC first when an adapter is
+configured; set `CEC_DEVICE=` to control a streaming box's own power instead of
+the TV it is connected to.
+
+### 2.9 `pair_lg_tv.py`
+
+One-off LG webOS pairing helper. Connects to `TV_IP` with `aiowebostv`, waits
+for the on-screen allow prompt, and writes the returned client key to
+`LG_CLIENT_KEY_FILE` (default
+`~/.local/state/tvpowersync/lg_client_key.txt`, mode `0600`).
+
+### 2.10 `pair_vizio_tv.py`
+
+One-off Vizio SmartCast pairing helper. Connects to `TV_IP:TV_VIZIO_PORT`,
+starts a pairing session, asks for the PIN shown on the TV, and writes the
+durable auth token to `VIZIO_TOKEN_FILE` (default
+`~/.local/state/tvpowersync/vizio_token.txt`, mode `0600`). Use
+`TV_VIZIO_PORT=9000` on older firmware.
 
 ---
 
@@ -215,8 +234,9 @@ uses only discrete commands.
 ### 3.2 Sleep (`_power_off_worker`)
 
 Triggered by DPMS off, lid close, dock unplug and suspend. The delivery-proof
-steps below are the Samsung backend's; Roku ECP, Android TV Remote and Fire TV
-ADB substitute their own switch-off command and confirmation.
+steps below are the Samsung backend's; Roku ECP, Android TV Remote, Fire TV
+ADB, LG webOS and Vizio SmartCast substitute their own switch-off command and
+confirmation.
 
 1. **Cancel any in-flight wake** via the new intent.
 2. **Cooldown** — skip if a sleep command was delivered less than 12s ago.
@@ -323,6 +343,9 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 | `ADB_BIN` | `adb` | Fire TV ADB executable |
 | `ANDROIDTV_CERT` / `ANDROIDTV_KEY` | `~/.local/state/tvpowersync/androidtv_*.pem` | Android TV pairing |
 | `ANDROIDTV_CLIENT_NAME` | `TVPowerSync` | Android TV pairing |
+| `LG_CLIENT_KEY_FILE` | `~/.local/state/tvpowersync/lg_client_key.txt` | LG webOS pairing |
+| `VIZIO_TOKEN_FILE` | `~/.local/state/tvpowersync/vizio_token.txt` | Vizio SmartCast pairing |
+| `TV_VIZIO_PORT` | `7345` | Vizio SmartCast HTTPS port |
 | `TV_MODE` | `3840x2160@60` | mode re-assert |
 | `TV_LOG_LEVEL` | `INFO` | all scripts |
 | `TV_PYTHON` | `$XDG_DATA_HOME/tvpowersync/venv/bin/python` | `deploy.sh` interpreter override |
@@ -333,10 +356,11 @@ per ~75s, when the TV is unplugged from AC or deliberately off.
 `$XDG_DATA_HOME/tvpowersync/venv` (default
 `~/.local/share/tvpowersync/venv`), so the checkout can be moved or deleted
 after deployment. When the venv is missing the script creates it with
-`--system-site-packages` and installs `samsungtvws`; `TV_PYTHON` overrides the
+`--system-site-packages` and installs the vendor libraries (`samsungtvws`,
+`androidtvremote2`, `aiowebostv`, `vizaio`); `TV_PYTHON` overrides the
 interpreter. If an existing venv cannot see the system bindings it writes a
 version-matched `000-system-bindings.pth` into the venv (the same effect as the
 flag) rather than re-creating it. It substitutes the selected interpreter into
 the user and boot units (`@PYTHON@`, `@BIN_DIR@`), rewrites the installed script
 shebangs to match, fails if no interpreter can import `dbus`/`gi`, and warns if
-`samsungtvws` is missing.
+any vendor library is missing.
