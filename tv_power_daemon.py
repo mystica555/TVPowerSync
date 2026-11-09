@@ -54,6 +54,11 @@ OFF_GUARD_SECONDS = 30.0
 # KDE's locker re-asserts DPMS around a blank/restore. Debounce an On
 # transition so a bounce cannot start a wake that the next sleep must cancel.
 PANEL_ON_SETTLE_MS = 800
+# KDE's unlock signal arrives a second or two after a panel wake, so it would
+# run a second decisive wake (query + IMAGE_VIEW_ON + routing) during the boot
+# the first one started. Ignore such an echo while the last wake is still fresh
+# and no sleep has been commanded since; a real off clears the timestamp.
+WAKE_ECHO_SECONDS = 5.0
 # While docked, hold one WebSocket open so port 8001 never goes cold.
 # Tizen drops a remote-control session that stays quiet for ~30s, so ping
 # well inside that window. A control frame every 10s is negligible traffic.
@@ -127,7 +132,14 @@ class TVPowerSyncDaemon:
         self._state_lock = threading.Lock()
         self._commanded_off = False
         self._last_commanded_off = 0.0
+        # Sleep workers currently on the wire. A standby frame that has
+        # already been transmitted cannot be retracted by a wake intent, so
+        # the wake path waits these out instead of trusting a stale "on".
+        self._sleep_inflight = 0
         self._last_wake_requested = 0.0
+        self._last_wake_ok = 0.0
+        self._last_source_reassert = 0.0
+        self._last_video_retrain = 0.0
         self._offline_streak = 0
         self._watchdog_running = False
 
@@ -474,6 +486,13 @@ class TVPowerSyncDaemon:
                 self.handle_screen_off("Laptop display DPMS went Off (hardware)")
             elif current == "On":
                 self._schedule_panel_wake("Laptop display DPMS went On (hardware)")
+                # Start the TV booting the moment the panel comes back, not
+                # 800ms later. A magic packet is harmless wherever the TV is
+                # in its cycle and can save the entire settle wait.
+                if self.read_external_display_status() == "connected":
+                    threading.Thread(
+                        target=self._early_wake_hint, daemon=True
+                    ).start()
 
         if self.uevent_socket is None:
             now = time.monotonic()
@@ -481,6 +500,29 @@ class TVPowerSyncDaemon:
                 self._last_fallback_check = now
                 self.check_external_display_transition("Periodic fallback poll")
         return True
+
+    def _early_wake_hint(self) -> None:
+        """Start the set before the debounce when it is known to be asleep.
+
+        The magic packet alone never boots this TV, so IMAGE_VIEW_ON is what
+        actually removes the 800ms debounce from the mouse-to-red-light path.
+        It is only sent when the daemon itself put the set in standby and no
+        sleep is still on the wire; every other trigger waits for the debounce
+        so a transient DPMS bounce cannot boot the TV for nothing.
+        """
+        self.backend.prewake(None)
+        elapsed = self._recent_off_elapsed()
+        if (
+            elapsed is not None
+            and elapsed < OFF_GUARD_SECONDS
+            and not self._sleep_in_flight()
+        ):
+            log.info(
+                "[*] TV is known to be in standby (%.1fs); sending CEC "
+                "image-view-on before the debounce.",
+                elapsed,
+            )
+            self.backend.cec_prewake(None)
 
     def on_watchdog_tick(self) -> bool:
         """Queue a watchdog check without ever blocking the event loop."""
@@ -647,6 +689,9 @@ class TVPowerSyncDaemon:
         with self._state_lock:
             self._commanded_off = True
             self._last_commanded_off = time.monotonic()
+            # A wake after a real sleep is always legitimate, so the echo
+            # guard must not apply across it.
+            self._last_wake_ok = 0.0
 
     def _clear_commanded_off(self) -> None:
         with self._state_lock:
@@ -675,10 +720,19 @@ class TVPowerSyncDaemon:
                 return None
             return time.monotonic() - self._last_commanded_off
 
+    def _sleep_in_flight(self) -> bool:
+        with self._state_lock:
+            return self._sleep_inflight > 0
+
+
     def request_power_off(self, reason: str, undock: bool | None = None) -> None:
         """Cancel any in-flight wake and put the TV to sleep."""
         with self._intent_lock:
             intent = self._new_intent_locked("off")
+        with self._state_lock:
+            # Registered before the worker starts, so a wake that arrives
+            # while the standby is already on the wire knows to wait for it.
+            self._sleep_inflight += 1
         if undock is None:
             undock = self.read_external_display_status() != "connected"
         threading.Thread(
@@ -705,6 +759,14 @@ class TVPowerSyncDaemon:
                 log.info(
                     "[*] Wake backed off for another %ds (%s)",
                     int(self.backoff.remaining()),
+                    reason,
+                )
+                return
+            since_ok = time.monotonic() - self._last_wake_ok
+            if since_ok < WAKE_ECHO_SECONDS:
+                log.info(
+                    "[*] TV was woken %.1fs ago; ignoring duplicate trigger (%s).",
+                    since_ok,
                     reason,
                 )
                 return
@@ -770,6 +832,8 @@ class TVPowerSyncDaemon:
         except Exception:
             log.exception("Error while sending TV sleep command (%s)", reason)
         finally:
+            with self._state_lock:
+                self._sleep_inflight = max(0, self._sleep_inflight - 1)
             self._finish_intent(intent)
 
     # ------------------------------------------------------------------
@@ -786,6 +850,8 @@ class TVPowerSyncDaemon:
 
             with self._intent_lock:
                 is_current = self._active_intent is intent
+                if succeeded and is_current:
+                    self._last_wake_ok = time.monotonic()
             if not is_current or intent.cancel.is_set():
                 log.debug("Wake intent %d superseded; not applying backoff", intent.seq)
                 return
@@ -812,12 +878,49 @@ class TVPowerSyncDaemon:
 
         log.info("--> [DECISIVE WAKE] (%s)", reason)
 
+        # Opportunistic WoL before any settle wait: if the set is already up
+        # this is harmless, and if it is not, it starts booting now instead of
+        # after the race handling. The CEC query below then decides whether a
+        # full wake is needed at all.
+        log.info("[*] Sending opportunistic Wake-on-LAN at DPMS on...")
+        self.backend.prewake(cancel)
+        if cancel.is_set():
+            return False
+
+        # A standby that is already on the wire cannot be retracted by this
+        # intent. Wait for the sleep worker to finish before reading the TV
+        # state; otherwise a dying TV still reports "on", the wake takes the
+        # fast path, and the TV then drops to standby while the watchdog has
+        # to start a second wake ~15s later.
+        sleep_race = self._sleep_in_flight()
+        if sleep_race:
+            log.info(
+                "[*] Sleep command still in flight; waiting for it to settle..."
+            )
+            deadline = time.monotonic() + SETTLE_SECONDS
+            while self._sleep_in_flight() and time.monotonic() < deadline:
+                if cancel.wait(0.1):
+                    log.info(
+                        "[*] Wake cancelled while waiting for the in-flight "
+                        "sleep command."
+                    )
+                    return False
+            sleep_race = self._sleep_in_flight()
+            if sleep_race:
+                log.info(
+                    "[*] Sleep command still in flight after %.1fs; forcing "
+                    "the full wake sequence.",
+                    SETTLE_SECONDS,
+                )
+
         # Respect the TV's shutdown settling window. A reported "on" is not
         # trustworthy while the TV is still shutting down (its control port
         # can linger for several seconds), so a recent off forces the full
         # wake sequence.
         elapsed = self._recent_off_elapsed()
-        recent_off = elapsed is not None and elapsed < OFF_GUARD_SECONDS
+        recent_off = sleep_race or (
+            elapsed is not None and elapsed < OFF_GUARD_SECONDS
+        )
         if elapsed is not None and elapsed < SETTLE_SECONDS:
             wait_time = SETTLE_SECONDS - elapsed
             log.info(
@@ -833,42 +936,73 @@ class TVPowerSyncDaemon:
             log.info("[*] Aborting wake after settle wait; external display disconnected.")
             return False
 
-        # Start the TV booting before the blocking CEC/API state query. On an
-        # extended standby that query can add several seconds; a magic packet
-        # to an already-awake TV is harmless.
-        log.info("[*] Sending early Wake-on-LAN before the TV state query...")
-        self.backend.prewake(cancel)
-        if cancel.is_set():
-            return False
-
         self._clear_commanded_off()
         self.ensure_dpms_on()
         ext_conn = tvlib.external_connector_name()
 
         if recent_off:
-            # We already know the TV was commanded off; skip the pre-wake CEC
-            # query and start the discrete wake immediately.
+            # Commanded off moments ago and CEC already confirmed standby. A
+            # state query costs 2-3s and can only answer standby/offline (the
+            # control port stays open, so the network fallback must not be
+            # used), so skip it and start the wake immediately.
             log.info(
                 "[*] TV was commanded off %.1fs ago; starting the full wake "
                 "sequence.",
-                elapsed,
+                elapsed or 0.0,
             )
         else:
-            tv_state = self.backend.power_state(cancel=cancel)
+            # IMAGE_VIEW_ON is what actually starts this set booting, and it
+            # is harmless on a set that is already up, so send it before the
+            # state query: the 1-3s query then overlaps the boot instead of
+            # delaying it. Routing is left out here because a booting set
+            # drops ACTIVE_SOURCE; it is re-sent once the TV is confirmed up.
+            log.info("[*] Sending CEC image-view-on before the state query...")
+            self.backend.cec_prewake(cancel)
             if cancel.is_set():
                 return False
-            if tv_state in ("on", "to-on"):
-                if tvlib.external_edid_present():
+
+            # Ask CEC whether the set is already up: it may be on with the
+            # panel merely blanked. No network fallback: this TV keeps port
+            # 8001 open in standby, so a TCP probe answers "on" while the set
+            # is off and would skip the real wake.
+            tv_state = self.backend.power_state(
+                cancel=cancel, allow_network_fallback=False
+            )
+            if cancel.is_set():
+                return False
+            # The query blocks on the CEC lock, so a sleep command that was
+            # on the wire can land while it runs. Treat that as a recent off
+            # instead of trusting the stale reading.
+            landed = self._recent_off_elapsed()
+            if landed is not None and landed < SETTLE_SECONDS:
+                log.info(
+                    "[*] A sleep command landed %.1fs ago while querying the "
+                    "TV; ignoring the stale '%s' reading and running the full "
+                    "wake sequence.",
+                    landed,
+                    tv_state,
+                )
+            elif tv_state == "on":
+                if not tvlib.external_edid_present():
+                    log.warning(
+                        "TV reports 'on' but the external display has no EDID; "
+                        "treating it as not ready and running the full wake "
+                        "sequence."
+                    )
+                else:
                     log.info(
-                        "[*] TV is already '%s' with EDID present. "
-                        "Re-asserting HDMI active source and display mode...",
-                        tv_state,
+                        "[*] TV is already 'on' with EDID present. "
+                        "Re-asserting HDMI active source and display mode..."
                     )
                     self._assert_video(ext_conn, cancel)
                     return True
-                log.warning(
-                    "TV reports '%s' but the external display has no EDID; "
-                    "treating it as not ready and running the full wake sequence.",
+            elif tv_state in ("standby", "to-on", "to-standby"):
+                # A set that is still booting acknowledges CEC power-on but
+                # drops an ACTIVE_SOURCE sent now, then settles on "No
+                # Signal". Run the full sequence and route it once it is up.
+                log.info(
+                    "TV is '%s'; running the full wake sequence so the input "
+                    "is routed after it finishes booting.",
                     tv_state,
                 )
 
@@ -884,7 +1018,7 @@ class TVPowerSyncDaemon:
 
         for attempt in range(1, 11):
             # Poll quickly at first (Tizen boots in a few seconds), then relax.
-            wait_time = 0.75 if attempt <= 4 else 1.5
+            wait_time = 0.5 if attempt <= 4 else 1.5
             if cancel.wait(wait_time):
                 log.info("[*] Wake cancelled during verification loop.")
                 return False
@@ -910,28 +1044,43 @@ class TVPowerSyncDaemon:
                     port=self.backend.probe_port,
                 )
             )
-            if edid_ready and (
-                current_state in ("on", "to-on") or network_ready
-            ):
+            # 'to-on' means the set is still booting: it answers CEC but its
+            # inputs are not up yet, so success here would only re-route the
+            # source into a set that drops it. The TCP probe covers the case
+            # where CEC gives no answer at all.
+            state_ready = current_state == "on" or (
+                current_state == "offline" and network_ready
+            )
+            if edid_ready and state_ready:
                 log.info(
                     "[*] TV confirmed awake (%s) on attempt %d with EDID. "
                     "Syncing video stream and active source...",
-                    current_state if current_state in ("on", "to-on") else "on",
+                    "on" if current_state == "on" else "CEC silent, port open",
                     attempt,
                 )
-                self._assert_video(ext_conn, cancel)
+                self._assert_video(
+                    ext_conn, cancel, retry_source=True, retrain=sleep_race
+                )
                 return True
             if current_state in ("on", "to-on") and not edid_ready:
                 log.info(
-                    "TV reports '%s' but no EDID yet; waiting for the HDMI "
-                    "stream...",
+                    "TV reports '%s' but no EDID yet; re-asserting the HDMI "
+                    "input and waiting for the stream...",
                     current_state,
                 )
+                # A TV that is awake on a different input never exposes EDID,
+                # so waiting alone can never succeed. Re-route it to us every
+                # round instead of only broadcasting magic packets.
+                if not self.backend.active_source(cancel):
+                    log.debug(
+                        "Active-source re-assert failed while waiting for EDID."
+                    )
 
-            # A full wake can block this loop for ~3s (CEC/ADB); the TV
-            # usually needs only the initial command, so retry the full
-            # sequence every third attempt and use the cheap nudge between.
-            if attempt % 3 == 0:
+            # A full wake can block this loop for ~3s (CEC/ADB), but a set
+            # that was caught mid-shutdown drops the first IMAGE_VIEW_ON: in
+            # that case waiting until attempt 3 cost ~6s before the set even
+            # answered. Repeat every second attempt and nudge in between.
+            if attempt % 2 == 0:
                 if not self.backend.wake(cancel):
                     log.debug("Wake retry %d did not report success.", attempt)
             else:
@@ -942,7 +1091,13 @@ class TVPowerSyncDaemon:
         log.warning("[!] Decisive wake did not detect the TV awake after 10 attempts.")
         return False
 
-    def _assert_video(self, connector: str | None, cancel: threading.Event) -> None:
+    def _assert_video(
+        self,
+        connector: str | None,
+        cancel: threading.Event,
+        retry_source: bool = False,
+        retrain: bool = False,
+    ) -> None:
         if cancel.is_set():
             return
         if connector:
@@ -962,6 +1117,89 @@ class TVPowerSyncDaemon:
             log.warning(
                 "%s active-source command did not succeed.", self.backend.name
             )
+        if retry_source:
+            self._schedule_source_reassert(connector, retrain=retrain)
+
+    def _schedule_source_reassert(
+        self,
+        connector: str | None,
+        delays: tuple[float, ...] = (1.0, 2.5, 4.0),
+        retrain: bool = False,
+    ) -> None:
+        """Re-route the TV once it has finished booting.
+
+        A standby set acknowledges CEC power-on while its inputs are still
+        coming up, so the ACTIVE_SOURCE sent during the wake is dropped and
+        the TV settles on "No Signal". Repeat the routing when it can
+        actually act on it: the first retry is deliberately early (the port
+        opens while the set is still booting, and a 3s first retry was what
+        the picture waited on), with later retries covering a slower boot.
+        """
+        with self._state_lock:
+            now = time.monotonic()
+            if now - self._last_source_reassert < 2.0:
+                return
+            self._last_source_reassert = now
+
+        def _worker() -> None:
+            for attempt, delay in enumerate(delays, start=1):
+                if self._keepalive_stop.wait(delay):
+                    return
+                if self.read_external_display_status() != "connected":
+                    return
+                if attempt == len(delays) and retrain:
+                    self._retrain_video_link(connector)
+                if self.backend.active_source(None):
+                    log.info(
+                        "[*] Re-asserted HDMI active source after the TV "
+                        "finished booting (attempt %d/%d).",
+                        attempt,
+                        len(delays),
+                    )
+
+        threading.Thread(
+            target=_worker, name="tv-source-reassert", daemon=True
+        ).start()
+
+    def _retrain_video_link(self, connector: str | None) -> None:
+        """Power-cycle the DP output so the TV re-locks to the signal.
+
+        After a fast standby/wake cycle the TV's HDMI receiver can stay out
+        of sync while the GPU still reports an active link with EDID, leaving
+        the set on "No Signal". Disabling and re-enabling the output forces a
+        fresh link training and mode set; this is the sequence that recovers
+        it. It only runs on cold wakes, and the output is always re-enabled
+        before the mode is re-asserted.
+        """
+        if not connector:
+            return
+        with self._state_lock:
+            now = time.monotonic()
+            if now - self._last_video_retrain < 60.0:
+                log.info("[*] Skipping the DP retrain; one ran less than 60s ago.")
+                return
+            self._last_video_retrain = now
+        log.info(
+            "[*] Re-training the DP link on %s to recover the video signal...",
+            connector,
+        )
+        self._run_kscreen([f"output.{connector}.disable"])
+        time.sleep(1.0)
+        self._run_kscreen([f"output.{connector}.enable"])
+        time.sleep(0.4)
+        self._run_kscreen([f"output.{connector}.mode.{self.config.tv_mode}"])
+
+    @staticmethod
+    def _run_kscreen(args: list[str]) -> None:
+        try:
+            subprocess.run(
+                ["kscreen-doctor", *args],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            log.warning("kscreen-doctor %s failed: %s", " ".join(args), exc)
 
     def ensure_dpms_on(self) -> None:
         current = self.read_hardware_dpms()

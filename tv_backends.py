@@ -210,6 +210,16 @@ class TvBackend:
                 cancel=cancel,
             )
 
+    def cec_prewake(self, cancel: Optional[threading.Event] = None) -> None:
+        """Request the TV view this source before any slow state query.
+
+        IMAGE_VIEW_ON is harmless on an awake set and starts a sleeping one
+        booting, so sending it ahead of a CEC power query hides that query's
+        1-3s behind the boot. No input routing here: a booting set drops it.
+        """
+        if self.cec is not None:
+            self.cec.image_view_on(cancel)
+
     def nudge(self, cancel: Optional[threading.Event] = None) -> None:
         """Cheap repeat used between verification polls."""
         if self.config.tv_mac and (cancel is None or not cancel.is_set()):
@@ -243,7 +253,12 @@ class TvBackend:
         if not self.cec.standby(cancel):
             return False
         log.info("[*] TV acknowledged HDMI-CEC standby (%s).", reason)
-        return self._confirm_cec_standby(cancel)
+        if self._confirm_cec_standby(cancel):
+            return True
+        # The frame was acknowledged before a wake superseded this intent, so
+        # the TV is going down. Report delivery either way; the daemon records
+        # the off and the wake re-runs instead of trusting a stale "on".
+        return cancel is not None and cancel.is_set()
 
     def active_source(self, cancel: Optional[threading.Event] = None) -> bool:
         """Re-assert this source (discrete IMAGE_VIEW_ON + ACTIVE_SOURCE)."""
@@ -310,7 +325,11 @@ class SamsungBackend(TvBackend):
                 if self._confirm_cec_standby(cancel):
                     return True
                 if cancel is not None and cancel.is_set():
-                    return False
+                    # Acknowledged before a wake superseded this intent: the TV
+                    # is going down anyway, so report delivery. The daemon then
+                    # records the off and the wake re-runs instead of trusting
+                    # a stale "on" reading.
+                    return True
                 log.warning(
                     "[!] TV still reports on after repeated CEC standby; "
                     "falling back to Wi-Fi WebSocket."

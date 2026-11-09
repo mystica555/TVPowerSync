@@ -545,14 +545,38 @@ class CecController:
             return None
         return parse_power_state((result.stdout or "") + (result.stderr or ""))
 
+    def image_view_on(self, cancel: Optional[threading.Event] = None) -> bool:
+        """Send IMAGE_VIEW_ON alone, without touching the input routing.
+
+        This is the message that starts a Samsung set booting. It is safe on
+        an awake set and can be sent before a slow power-state query so the
+        boot overlaps the query instead of starting after it. Routing is
+        deliberately left out: a still-booting set drops ACTIVE_SOURCE, so
+        that is re-sent once the set is confirmed up.
+        """
+        result = self._run(
+            ["--playback", "--to", "0", "--image-view-on"],
+            self.action_timeout,
+            cancel,
+        )
+        return cec_transmit_acknowledged(result)
+
     def wake(self, cancel: Optional[threading.Event] = None) -> bool:
-        """Discrete IMAGE_VIEW_ON + ACTIVE_SOURCE (never a power toggle)."""
+        """Discrete IMAGE_VIEW_ON + SET_STREAM_PATH + ACTIVE_SOURCE.
+
+        Never a power toggle. SET_STREAM_PATH is broadcast alongside
+        ACTIVE_SOURCE because a Samsung set that was switched away (for
+        example by a standby/wake cycle) can ignore a bare ACTIVE_SOURCE and
+        keep showing "no signal" while our source is already active.
+        """
         result = self._run(
             [
                 "--playback",
                 "--to",
                 "0",
                 "--image-view-on",
+                "--set-stream-path",
+                f"phys-addr={self.phys_addr}",
                 "--active-source",
                 f"phys-addr={self.phys_addr}",
             ],
@@ -562,12 +586,14 @@ class CecController:
         return cec_transmit_acknowledged(result)
 
     def active_source(self, cancel: Optional[threading.Event] = None) -> bool:
-        """Discrete ACTIVE_SOURCE, without another power-on request."""
+        """Re-route the TV to us with SET_STREAM_PATH + ACTIVE_SOURCE."""
         result = self._run(
             [
                 "--playback",
                 "--to",
                 "0",
+                "--set-stream-path",
+                f"phys-addr={self.phys_addr}",
                 "--active-source",
                 f"phys-addr={self.phys_addr}",
             ],

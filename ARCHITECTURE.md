@@ -223,30 +223,63 @@ its own wake command and readiness probe.
 
 1. **Cancellation / connection guard** — abort if the intent was superseded or
    the external display is disconnected.
-2. **Settle window** — if the TV was commanded off less than 3s ago, wait out
-   the remainder. The wait is interruptible by a new intent. A reported `on`
+2. **Settle window** — if the TV was commanded off less than 3s ago, wait out the
+   remainder. The wait is interruptible by a new intent. A reported `on`
    during this window is ignored (Tizen can keep port 8001 open while shutting
    down): the pre-wake CEC query is skipped, and the early WoL hint plus full
-   WoL + CEC sequence run immediately after the settle.
-3. **Early WoL** — send three magic-packet bursts before any blocking CEC/API
-   state query. On extended standby that query can take several seconds;
-   starting the network wake first lets the TV boot while the query runs.
-   Repeating the WoL in the full wake sequence is harmless.
+   WoL + CEC sequence run immediately after the settle. If a sleep worker is
+   still on the wire, the wake waits for it (up to 3s) and re-checks the off
+   timestamp after the blocking state query, so a wake can no longer declare
+   success while the TV is still shutting down.
+3. **Opportunistic wake hints** — the moment the panel reports `On`, before the
+   800ms debounce and the settle window, send three magic-packet bursts. When
+   the daemon itself commanded standby and no sleep worker is still on the
+   wire, also send `IMAGE_VIEW_ON` right there: the magic packet alone does not
+   boot this set, and otherwise the debounce sits between the mouse and the red
+   light. Every other trigger waits out the debounce, so a transient DPMS
+   bounce cannot boot the TV for nothing. The full wake sequence repeats both,
+   which is harmless.
 4. **Clear the off cooldown**, then ensure KDE DPMS is on *only if the panel is
    currently off* (avoids spawning a Qt process on every wake).
-5. **Fast path** — query CEC. If already `on`/`to-on`, re-assert the video mode
-   and CEC active source and return.
+5. **Fast path** — send a bare CEC `IMAGE_VIEW_ON` (no `ACTIVE_SOURCE`, which
+   a booting set would drop), then query CEC when the TV was not recently
+   commanded off. The image-view-on is harmless on an awake set and is what
+   starts a sleeping one booting, so the query's 1-3s overlaps the boot
+   instead of delaying it. Only a settled `on` (with EDID) re-asserts the video
+   mode and CEC active source and returns. A set that was commanded off moments
+   ago skips both the query and the extra image-view-on: it
+   costs 2-3s and can only answer standby, so the full sequence starts at once.
+   The query never uses the network fallback, because the control port stays
+   open in standby and would report `on`. A `to-on`/`to-standby` set is still
+   booting: it acknowledges CEC power-on but drops an `ACTIVE_SOURCE` sent in
+   that window, so it takes the full sequence instead.
 6. **Wake** — 5 WoL bursts (one `ip` enumeration cached for the whole sequence)
    plus a single `cec-ctl --playback --to 0 --image-view-on --active-source`
    invocation.
-7. **Verification loop** — up to 10 attempts, polling TCP every 0.75s for the
+7. **Verification loop** — up to 10 attempts, polling TCP every 0.5s for the
    first four attempts and every 1.5s afterwards. WoL is re-sent each round; the
    blocking CEC wake is repeated only every third round so it does not delay the
    polls. The loop exits immediately if the intent is cancelled or the dock is
    unplugged.
-8. **Video mode re-assert** — `kscreen-doctor output.<connector>.mode.<TV_MODE>`.
-   Using the mode string rather than a positional index survives mode-table
-   changes.
+8. **Video mode re-assert** — `kscreen-doctor output.<connector>.mode.<TV_MODE>`,
+   followed by `SET_STREAM_PATH` + `ACTIVE_SOURCE` so a TV left on another
+   input switches back. Using the mode string rather than a positional index
+   survives mode-table changes. While the TV reports on without EDID (awake on
+   another input), the verification loop re-sends the active source every round
+   instead of only broadcasting WoL. Every successful wake also schedules the
+   same routing again 1s, 2.5s and 4s later, because a set that has just powered
+   on accepts CEC frames before its inputs are ready and would otherwise settle
+   on "No Signal" with the first, dropped `ACTIVE_SOURCE`. The first retry is
+   deliberately early: the control port opens while the set is still booting, so
+   a 3s first retry made the picture itself wait ~3s. The last repeat is
+   preceded by a DP link retrain (disable the output, re-enable it, then
+   re-assert the native mode), which recovers a TV whose HDMI receiver stayed
+   out of sync after a fast standby/wake cycle even though the GPU still
+   reports an active link with EDID. The retrain only runs when that wake had
+   to wait for an in-flight sleep command (the race that produces the desync),
+   and at most once a minute, so ordinary cold wakes never blank the screen.
+   A `to-on` reading in the verification loop is not treated as awake; only a
+   settled `on` (or a silent CEC with a reachable control port) ends the wake.
 9. **[Backoff](#35-watchdog-backoff)** — a failed, still-current wake doubles the delay (max 15min).
    Superseded wakes do not apply backoff.
 
