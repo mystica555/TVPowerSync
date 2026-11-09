@@ -29,7 +29,7 @@ Automated power synchronization, dock/lid state tracking, hardware DPMS monitori
 4. **Intent Model, Serialized CEC & Exponential Backoff**:
    - Every ON/OFF request is a monotonically numbered intent with its own cancellation event. A new intent cancels the previous one, and workers check cancellation before each side effect — a slow sleep retry can no longer deliver `KEY_POWER` after a wake has started.
    - HDMI-CEC access is serialized: only one `cec-ctl` process can touch `/dev/cec0` at a time, and a cancelled intent's command is dropped inside that lock. Wake, standby and query are each a single `cec-ctl` invocation.
-   - The 5-second watchdog runs in a worker thread, probes the selected backend's control port (no forks while streaming; port `8001` for Samsung), falls back to CEC when the port is closed, and requires two consecutive `offline` readings.
+   - The 5-second watchdog runs in a worker thread, probes the selected backend's control port (no forks while streaming; Samsung listens on `8001` for Tizen, `55000` for legacy), falls back to CEC when the port is closed, and requires two consecutive `offline` readings.
    - Failed wakes back off exponentially (60s → 120s → ... → 15min) instead of retrying every ~75s forever. A dock connect, DPMS-on, lid-open or unlock resets the backoff.
    - 12-second duplicate-off cooldown, shared by CEC and WebSocket paths.
 
@@ -54,12 +54,24 @@ change can also be made with `systemctl --user edit tv-power-sync.service`.
 | Backend | Best for | Requirements |
 | :--- | :--- | :--- |
 | `cec` | Any CEC-capable TV | `cec-utils`, `/dev/cec0` (udev rule included) |
-| `samsung` | Samsung Tizen TVs | `samsungtvws`, TV network control on port 8001 |
+| `samsung` | Samsung TVs, Tizen or pre-2016 | Tizen: `samsungtvws`, network control on port 8001. Pre-2016: built-in TCP client on port 55000 (`TV_SAMSUNG_PROTOCOL=legacy`), no extra dependency |
 | `roku` | Roku TVs | ECP enabled (`Settings > System > Advanced system settings > Control by mobile apps`) |
 | `androidtv` | Android TV / Google TV devices | `androidtvremote2`, run `pair_android_tv.py` once |
 | `firetv` | Fire TV / Fire TV Edition televisions | `adb`, ADB debugging enabled and authorized |
 | `lg` | LG webOS TVs | `aiowebostv`, run `pair_lg_tv.py` once; network standby and WoL enabled |
 | `vizio` | Vizio SmartCast TVs | `vizaio`, run `pair_vizio_tv.py` once; port 7345 (9000 on older firmware) |
+
+### Older Samsung TVs
+
+Sets from before 2016 use a plain TCP remote-control protocol on port 55000
+instead of the Tizen WebSocket API. The `samsung` backend speaks both: set
+`TV_SAMSUNG_PROTOCOL=legacy` for those TVs. The TV asks once, on screen,
+whether to allow the remote; approve it for `TVPowerSync`. Legacy sets use
+`KEY_POWEROFF` (Tizen renamed it to `KEY_POWER`), stop answering on their
+control port in standby, and cannot be woken through this API — Wake-on-LAN and
+HDMI-CEC remain the wake paths. The protocol implementation is adapted from
+[`samsungctl`](https://github.com/Ape/samsungctl); see
+[THIRD_PARTY_NOTICES.md](https://github.com/mystica555/TVPowerSync/blob/master/THIRD_PARTY_NOTICES.md).
 
 Set `TV_IP` to the device and `TV_MAC` for Wake-on-LAN. LG and Vizio use
 their local API for state and standby, but wake a fully sleeping TV through
@@ -78,6 +90,8 @@ All scripts read the same environment variables (defaults match the original set
 | `TV_IP` | `192.168.0.2` | TV address |
 | `TV_MAC` | `40:16:3b:d0:4f:8b` | Wake-on-LAN target (leave unset for non-Samsung to disable WoL) |
 | `TV_BACKEND` | `samsung` | `cec`, `samsung`, `roku`, `androidtv`, `firetv`, `lg` or `vizio` |
+| `TV_SAMSUNG_PROTOCOL` | `ws` | Samsung control API: `ws` (Tizen) or `legacy` (pre-2016 TCP) |
+| `TV_SAMSUNG_PORT` | `8001` / `55000` | Samsung network-control port; the default follows `TV_SAMSUNG_PROTOCOL` (`8001` Tizen, `55000` legacy) |
 | `CEC_DEVICE` | `/dev/cec0` | HDMI-CEC adapter (empty disables CEC) |
 | `CEC_PHYS_ADDR` | `1.0.0.0` | CEC physical address advertised as the laptop's source |
 | `TV_ECP_PORT` | `8060` | Roku ECP port |
@@ -163,9 +177,10 @@ parse_drm_info       # Summarize DRM GPU pipes, planes, and connector capabiliti
 ## Caveats
 
 - The watchdog's TCP fallback assumes the TV closes the backend's control port
-  in standby (for example port `8001` on Samsung). If a firmware update keeps it
-  open, CEC remains the authoritative state source (the daemon queries CEC when
-  the port is closed, and reports `on` otherwise).
+  in standby (for example the Samsung control port, `8001` on Tizen or `55000`
+  on legacy). If a firmware update keeps it open, CEC remains the authoritative
+  state source (the daemon queries CEC when the port is closed, and reports `on`
+  otherwise).
 - A system suspend can begin before the asynchronous sleep worker finishes. The
   daemon still issues the command as early as possible, but logind does not wait
   for `PrepareForSleep` handlers.
@@ -185,4 +200,6 @@ parse_drm_info       # Summarize DRM GPU pipes, planes, and connector capabiliti
 
 TVPowerSync is licensed under the BSD 3-Clause License. See
 [LICENSE](https://github.com/mystica555/TVPowerSync/blob/master/LICENSE) for the
-full text.
+full text. The pre-Tizen Samsung protocol in `tvlib.py` is adapted from
+`samsungctl` (MIT, Copyright (c) 2014 Lauri Niskanen); the upstream license text
+is reproduced in [THIRD_PARTY_NOTICES.md](https://github.com/mystica555/TVPowerSync/blob/master/THIRD_PARTY_NOTICES.md).

@@ -161,11 +161,13 @@ Grants the active desktop user access to `/dev/cec0` without root.
 
 ### 2.7 `tvlib.py`
 
-Shared config, logging, WoL, CEC, WebSocket, DRM-sysfs and backoff helpers. The
-daemon, CLI, boot service and backends all import it, so `send_wol`, power-state
-parsing and connector discovery exist in exactly one place. `TvLink` holds the
-optional kept-warm Samsung remote-control WebSocket; `send_key` remains the
-one-shot fallback.
+Shared config, logging, WoL, CEC, Samsung remote transports, DRM-sysfs and
+backoff helpers. The daemon, CLI, boot service and backends all import it, so
+`send_wol`, power-state parsing and connector discovery exist in exactly one
+place. `TvLink` holds the optional kept-warm Tizen WebSocket, `LegacyLink` the
+pre-2016 TCP session (adapted from `samsungctl`; see
+`THIRD_PARTY_NOTICES.md`), and `send_key` remains the one-shot WebSocket
+fallback.
 
 ### 2.8 `tv_backends.py`
 
@@ -180,8 +182,10 @@ active_source(cancel) / keepalive() / close()
 ```
 
 `TvBackend` supplies the CEC + WoL baseline; `CecBackend` is the vendor-neutral
-choice. `SamsungBackend` adds the Tizen WebSocket and the proven-toggle
-fallback. `RokuBackend` uses ECP (`/query/device-info`, `PowerOn`, `PowerOff`).
+choice. `SamsungBackend` adds the Samsung remote API — the Tizen WebSocket, or
+the pre-2016 TCP protocol on port 55000 (or `TV_SAMSUNG_PORT`) when
+`TV_SAMSUNG_PROTOCOL=legacy` — and the proven-toggle fallback. `RokuBackend`
+uses ECP (`/query/device-info`, `PowerOn`, `PowerOff`).
 `AndroidTvBackend` uses Android TV Remote v2 and expects `pair_android_tv.py` to
 have saved a client certificate. `FireTvBackend` uses ADB `dumpsys power` and
 key codes 223/224. `WebOsBackend` uses `aiowebostv`/SSAP and expects the client

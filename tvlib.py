@@ -14,6 +14,8 @@ Configuration is read from the environment (all optional):
   CEC_DEVICE    HDMI-CEC adapter          (default /dev/cec0; empty disables CEC)
   CEC_PHYS_ADDR CEC physical address      (default 1.0.0.0)
   TV_MODE       Native mode for kscreen   (default 3840x2160@60)
+  TV_SAMSUNG_PROTOCOL  Samsung control API (ws or legacy, default ws)
+  TV_SAMSUNG_PORT      Samsung control port (default 8001 Tizen / 55000 legacy)
   TV_LOG_LEVEL  Logging level             (default INFO)
 """
 
@@ -27,6 +29,7 @@ import json
 import logging
 import os
 import re
+import select
 import socket
 import struct
 import subprocess
@@ -49,6 +52,8 @@ TV_BACKENDS = frozenset(
     {"cec", "samsung", "roku", "androidtv", "firetv", "lg", "vizio"}
 )
 TV_WS_PORT = 8001
+TV_LEGACY_PORT = 55000
+SAMSUNG_PROTOCOLS = frozenset({"ws", "legacy"})
 _WS_NAME_B64 = base64.b64encode(b"SamsungTvRemote").decode("ascii")
 _STATE_HOME = os.environ.get(
     "XDG_STATE_HOME", os.path.expanduser("~/.local/state")
@@ -155,6 +160,8 @@ class Config:
     lg_client_key_file: str = DEFAULT_LG_CLIENT_KEY
     vizio_token_file: str = DEFAULT_VIZIO_TOKEN
     vizio_port: int = DEFAULT_VIZIO_PORT
+    samsung_protocol: str = "ws"
+    samsung_port: int = TV_WS_PORT
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -169,6 +176,15 @@ class Config:
             raise ValueError(
                 f"Invalid TV_BACKEND {backend!r} (choose from "
                 f"{', '.join(sorted(TV_BACKENDS))})"
+            )
+
+        samsung_protocol = os.environ.get(
+            "TV_SAMSUNG_PROTOCOL", "ws"
+        ).strip().lower()
+        if samsung_protocol not in SAMSUNG_PROTOCOLS:
+            raise ValueError(
+                f"Invalid TV_SAMSUNG_PROTOCOL {samsung_protocol!r} "
+                "(choose from ws, legacy)"
             )
 
         # The default MAC belongs to the Samsung installation. For another
@@ -223,6 +239,11 @@ class Config:
             ).strip()
             or DEFAULT_VIZIO_TOKEN,
             vizio_port=_env_port("TV_VIZIO_PORT", DEFAULT_VIZIO_PORT),
+            samsung_protocol=samsung_protocol,
+            samsung_port=_env_port(
+                "TV_SAMSUNG_PORT",
+                TV_LEGACY_PORT if samsung_protocol == "legacy" else TV_WS_PORT,
+            ),
         )
 
 
@@ -660,8 +681,11 @@ class TvLink:
     for the link, and the TV should only see one session from us.
     """
 
-    def __init__(self, tv_ip: str, timeout: float = 1.5) -> None:
+    def __init__(
+        self, tv_ip: str, port: int = TV_WS_PORT, timeout: float = 1.5
+    ) -> None:
         self.tv_ip = tv_ip
+        self.port = port
         self.timeout = timeout
         self._lock = threading.Lock()
         self._ws = None
@@ -689,12 +713,12 @@ class TvLink:
             sock.settimeout(timeout)
             try:
                 sock.bind((source, 0))
-                sock.connect((self.tv_ip, TV_WS_PORT))
+                sock.connect((self.tv_ip, self.port))
             except OSError:
                 sock.close()
                 raise
         url = (
-            f"ws://{self.tv_ip}:{TV_WS_PORT}"
+            f"ws://{self.tv_ip}:{self.port}"
             f"/api/v2/channels/samsung.remote.control?name={_WS_NAME_B64}"
         )
         ws = websocket.WebSocket()
@@ -824,6 +848,221 @@ class TvLink:
                 except Exception as exc:
                     log.warning(
                         "Warm WebSocket %s failed (attempt %d/2): %s",
+                        key,
+                        attempt,
+                        exc,
+                    )
+                    self._close_locked()
+            return False
+
+    def close(self) -> None:
+        with self._lock:
+            self._close_locked()
+
+
+# ---------------------------------------------------------------------------
+# Samsung pre-Tizen remote (legacy TCP, port 55000)
+# ---------------------------------------------------------------------------
+
+# The frame format below is reimplemented from samsungctl's remote_legacy.py
+# (MIT, Copyright (c) 2014 Lauri Niskanen); see THIRD_PARTY_NOTICES.md for the
+# full license text. Pre-2016 sets preceded the Tizen WebSocket API with this
+# plain TCP protocol and call the discrete power key KEY_POWEROFF.
+
+_LEGACY_HANDSHAKE_ACK = b"\x64\x00\x01\x00"
+_LEGACY_HANDSHAKE_DENIED = b"\x64\x00\x00\x00"
+_LEGACY_CONTROL_ACK = b"\x00\x00\x00\x00"
+_LEGACY_AWAITING_AUTH = b"\x0a"
+_LEGACY_AUTH_CANCELLED = b"\x65"
+_LEGACY_REMOTE_NAME = "TVPowerSync"
+_LEGACY_REMOTE_DESCRIPTION = "PC"
+
+
+def _legacy_string(value, raw: bool = False) -> bytes:
+    """Encode one protocol string: a one-byte length, NUL, then the data."""
+    if isinstance(value, str):
+        value = value.encode("utf-8")
+    if not raw:
+        value = base64.b64encode(value)
+    if len(value) > 255:
+        raise ValueError("Legacy Samsung frame string exceeds 255 bytes")
+    return bytes([len(value)]) + b"\x00" + value
+
+
+def _recv_exact(sock: socket.socket, count: int) -> bytes:
+    """Read exactly count bytes; TVs fragment frames across TCP segments."""
+    chunks: list[bytes] = []
+    remaining = count
+    while remaining:
+        chunk = sock.recv(remaining)
+        if not chunk:
+            raise ConnectionError("TV closed the connection")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def _legacy_response(sock: socket.socket, timeout: float) -> bytes:
+    """Read one response frame: the TV-name block, then the payload."""
+    sock.settimeout(timeout)
+    header = _recv_exact(sock, 3)
+    name_length = int.from_bytes(header[1:3], byteorder="little")
+    if name_length:
+        _recv_exact(sock, name_length)
+    length = int.from_bytes(_recv_exact(sock, 2), byteorder="little")
+    return _recv_exact(sock, length)
+
+
+class LegacyLink:
+    """A kept-warm TCP session to a pre-2016 Samsung TV.
+
+    These sets have no WebSocket API; they use a binary frame format carrying
+    base64 strings over a plain TCP connection on port 55000. There is no
+    token to save -- the TV asks on screen, once per remote name, whether to
+    allow the connection. The session is stateful, so it is reused for later
+    keys and reconnected once on failure.
+
+    All calls are serialized for the same reason as TvLink: the keepalive
+    thread and a power worker can race, and the TV should see one session.
+    """
+
+    def __init__(
+        self,
+        tv_ip: str,
+        port: int = TV_LEGACY_PORT,
+        timeout: float = 1.5,
+    ) -> None:
+        self.tv_ip = tv_ip
+        self.port = port
+        self.timeout = timeout
+        self._lock = threading.Lock()
+        self._sock: Optional[socket.socket] = None
+        self._warm = False
+
+    @property
+    def warm(self) -> bool:
+        return self._warm
+
+    # -- internals (call with the lock held) -----------------------------
+
+    def _connect_locked(
+        self, timeout: float, bind_wifi: bool = True
+    ) -> socket.socket:
+        """Connect, complete the handshake and return the open session.
+
+        The socket is sourced from the Wi-Fi address so the session outlives
+        the dock removal, matching TvLink; the retry falls back to the default
+        route when no wireless interface is up.
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        try:
+            source = wireless_ipv4_address() if bind_wifi else None
+            if source:
+                sock.bind((source, 0))
+            sock.connect((self.tv_ip, self.port))
+            handshake = (
+                b"\x64\x00"
+                + _legacy_string(_LEGACY_REMOTE_DESCRIPTION)
+                + _legacy_string("")
+                + _legacy_string(_LEGACY_REMOTE_NAME)
+            )
+            sock.sendall(b"\x00\x00\x00" + _legacy_string(handshake, raw=True))
+            response = _legacy_response(sock, timeout)
+        except Exception:
+            sock.close()
+            raise
+
+        if response == _LEGACY_HANDSHAKE_ACK:
+            return sock
+
+        sock.close()
+        if response == _LEGACY_HANDSHAKE_DENIED:
+            raise PermissionError("TV denied the remote-control connection")
+        if response[0:1] == _LEGACY_AWAITING_AUTH:
+            raise PermissionError(
+                "TV is waiting for the remote to be allowed on screen"
+            )
+        if response[0:1] == _LEGACY_AUTH_CANCELLED:
+            raise PermissionError("TV cancelled the remote-control request")
+        raise ConnectionError(
+            f"Unexpected legacy Samsung handshake response: {response!r}"
+        )
+
+    def _close_locked(self) -> None:
+        sock, self._sock = self._sock, None
+        self._warm = False
+        if sock is None:
+            return
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+    def _alive_locked(self) -> bool:
+        sock = self._sock
+        if sock is None:
+            return False
+        try:
+            readable, _, _ = select.select([sock], [], [], 0)
+            if not readable:
+                return True
+            # An idle legacy session carries no unsolicited traffic: readable
+            # means the peer closed it or left a frame in the stream that the
+            # next request would misread, so drop the session.
+            return False
+        except OSError:
+            return False
+
+    # -- public API ------------------------------------------------------
+
+    def keepalive(self) -> bool:
+        """Hold the session open; legacy sets have no ping to send."""
+        with self._lock:
+            if self._sock is not None and self._alive_locked():
+                self._warm = True
+                return True
+            self._close_locked()
+            try:
+                self._sock = self._connect_locked(self.timeout)
+            except Exception as exc:
+                log.debug("Legacy TV control channel unavailable: %s", exc)
+                return False
+            log.debug("Legacy TV control channel established.")
+            self._warm = True
+            return True
+
+    def send_key(
+        self,
+        key: str,
+        timeout: float = 2.5,
+        cancel: Optional[threading.Event] = None,
+    ) -> bool:
+        """Send a key over the session, reconnecting once on failure."""
+        if cancel is not None and cancel.is_set():
+            return False
+        payload = b"\x00\x00\x00" + _legacy_string(key)
+        packet = b"\x00\x00\x00" + _legacy_string(payload, raw=True)
+        with self._lock:
+            for attempt in (1, 2):
+                if cancel is not None and cancel.is_set():
+                    return False
+                try:
+                    if self._sock is None:
+                        self._sock = self._connect_locked(
+                            timeout, bind_wifi=attempt == 1
+                        )
+                    self._sock.sendall(packet)
+                    response = _legacy_response(self._sock, timeout)
+                    if response != _LEGACY_CONTROL_ACK:
+                        raise ConnectionError(
+                            f"Unexpected legacy Samsung response: {response!r}"
+                        )
+                    self._warm = True
+                    return True
+                except Exception as exc:
+                    log.warning(
+                        "Legacy Samsung %s failed (attempt %d/2): %s",
                         key,
                         attempt,
                         exc,

@@ -18,7 +18,7 @@ HDMI-CEC is the common baseline: every backend uses it for power state and
 standby when an adapter is available. Vendor APIs are layered on top:
 
     cec       Generic HDMI-CEC + Wake-on-LAN.
-    samsung   CEC + Samsung Tizen WebSocket (legacy default).
+    samsung   CEC + Samsung remote API (Tizen WebSocket, or pre-2016 TCP).
     roku      CEC + Roku ECP on port 8060.
     androidtv CEC + Android TV Remote protocol v2 (optional dependency).
     firetv    CEC + ADB (Fire TV / Fire TV Edition televisions).
@@ -270,16 +270,24 @@ class CecBackend(TvBackend):
 
 
 class SamsungBackend(TvBackend):
-    """Samsung Tizen: CEC plus the WebSocket remote-control API."""
+    """Samsung: CEC plus the WebSocket (Tizen) or legacy (pre-2016) API."""
 
     name = "samsung"
     description = "Samsung Tizen WebSocket + HDMI-CEC"
     supports_keepalive = True
-    probe_port = tvlib.TV_WS_PORT
 
     def __init__(self, config: tvlib.Config) -> None:
         super().__init__(config)
-        self.tv_link = tvlib.TvLink(config.tv_ip)
+        self.legacy = config.samsung_protocol == "legacy"
+        self.probe_port = config.samsung_port
+        # Pre-2016 firmware calls the discrete power key KEY_POWEROFF; Tizen
+        # renamed it to KEY_POWER, and the wrong name is silently ignored.
+        self.key_power = "KEY_POWEROFF" if self.legacy else "KEY_POWER"
+        if self.legacy:
+            self.description = "Samsung pre-Tizen remote + HDMI-CEC"
+            self.tv_link = tvlib.LegacyLink(config.tv_ip, port=config.samsung_port)
+        else:
+            self.tv_link = tvlib.TvLink(config.tv_ip, port=config.samsung_port)
 
     def standby(
         self,
@@ -329,7 +337,7 @@ class SamsungBackend(TvBackend):
         # The warm socket is sourced from Wi-Fi, so it outlives the dock
         # removal. Use it before any probe or reconnect work.
         if self.tv_link.warm and self.tv_link.send_key(
-            "KEY_POWER", timeout=2.5, cancel=cancel
+            self.key_power, timeout=2.5, cancel=cancel
         ):
             log.info("[*] TV sleep command delivered on the warm channel (%s).", reason)
             return True
@@ -348,9 +356,11 @@ class SamsungBackend(TvBackend):
                 return False
             # A short probe keeps failed attempts cheap while Wi-Fi route
             # failover settles; a reachable LAN answers in a few ms.
-            if tvlib.is_tv_network_awake(self.config.tv_ip, timeout=0.25):
+            if tvlib.is_tv_network_awake(
+                self.config.tv_ip, timeout=0.25, port=self.probe_port
+            ):
                 if self.tv_link.send_key(
-                    "KEY_POWER", timeout=2.5, cancel=cancel
+                    self.key_power, timeout=2.5, cancel=cancel
                 ):
                     log.info(
                         "[*] TV sleep command delivered over Wi-Fi on "

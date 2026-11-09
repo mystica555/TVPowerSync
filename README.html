@@ -489,7 +489,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
     <div class="mobile-toc">
       <details>
         <summary>On this page</summary>
-        <nav class="toc" aria-label="Table of contents (mobile)"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#backends">Backends</a></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li><li><a href="#license">License</a></li></ul></nav>
+        <nav class="toc" aria-label="Table of contents (mobile)"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#backends">Backends</a><ul class="toc-sub"><li><a href="#older-samsung-tvs">Older Samsung TVs</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li><li><a href="#license">License</a></li></ul></nav>
       </details>
     </div>
 
@@ -497,10 +497,10 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
       <p class="side-label">Documentation</p>
       <nav class="doc-switch" aria-label="Documents"><a class="switch is-active" href="README.html" aria-current="page"><span class="switch-kicker">README</span><span class="switch-title">Overview &amp; deployment</span><span class="switch-meta">Features &middot; configuration &middot; CLI</span></a><a class="switch" href="ARCHITECTURE.html"><span class="switch-kicker">Architecture</span><span class="switch-title">Internals &amp; event flow</span><span class="switch-meta">Topology &middot; state machine &middot; edge cases</span></a></nav>
       <p class="side-label">On this page</p>
-      <nav class="toc" aria-label="Table of contents"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#backends">Backends</a></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li><li><a href="#license">License</a></li></ul></nav>
+      <nav class="toc" aria-label="Table of contents"><ul><li><a href="#full-feature-set">Full Feature Set</a></li><li><a href="#backends">Backends</a><ul class="toc-sub"><li><a href="#older-samsung-tvs">Older Samsung TVs</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#directory-structure-xdg-compliance">Directory Structure &amp; XDG Compliance</a></li><li><a href="#deployment">Deployment</a></li><li><a href="#cli-usage">CLI Usage</a></li><li><a href="#caveats">Caveats</a></li><li><a href="#license">License</a></li></ul></nav>
       <p class="side-foot">
         Rendered from <a href="README.md">README.md</a><br>
-        TVPowerSync v1.1.4
+        TVPowerSync v1.1.5
       </p>
     </aside>
 
@@ -539,7 +539,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
 <p><strong>Intent Model, Serialized CEC &amp; Exponential Backoff</strong>:
    - Every ON/OFF request is a monotonically numbered intent with its own cancellation event. A new intent cancels the previous one, and workers check cancellation before each side effect — a slow sleep retry can no longer deliver <code>KEY_POWER</code> after a wake has started.
    - HDMI-CEC access is serialized: only one <code>cec-ctl</code> process can touch <code>/dev/cec0</code> at a time, and a cancelled intent's command is dropped inside that lock. Wake, standby and query are each a single <code>cec-ctl</code> invocation.
-   - The 5-second watchdog runs in a worker thread, probes the selected backend's control port (no forks while streaming; port <code>8001</code> for Samsung), falls back to CEC when the port is closed, and requires two consecutive <code>offline</code> readings.
+   - The 5-second watchdog runs in a worker thread, probes the selected backend's control port (no forks while streaming; Samsung listens on <code>8001</code> for Tizen, <code>55000</code> for legacy), falls back to CEC when the port is closed, and requires two consecutive <code>offline</code> readings.
    - Failed wakes back off exponentially (60s → 120s → ... → 15min) instead of retrying every ~75s forever. A dock connect, DPMS-on, lid-open or unlock resets the backoff.
    - 12-second duplicate-off cooldown, shared by CEC and WebSocket paths.</p>
 </li>
@@ -577,8 +577,8 @@ change can also be made with <code>systemctl --user edit tv-power-sync.service</
 </tr>
 <tr>
 <td style="text-align: left;"><code>samsung</code></td>
-<td style="text-align: left;">Samsung Tizen TVs</td>
-<td style="text-align: left;"><code>samsungtvws</code>, TV network control on port 8001</td>
+<td style="text-align: left;">Samsung TVs, Tizen or pre-2016</td>
+<td style="text-align: left;">Tizen: <code>samsungtvws</code>, network control on port 8001. Pre-2016: built-in TCP client on port 55000 (<code>TV_SAMSUNG_PROTOCOL=legacy</code>), no extra dependency</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>roku</code></td>
@@ -607,6 +607,16 @@ change can also be made with <code>systemctl --user edit tv-power-sync.service</
 </tr>
 </tbody>
 </table></div>
+<h3 id="older-samsung-tvs">Older Samsung TVs<a class="headerlink" href="#older-samsung-tvs" title="Link to this section">#</a></h3>
+<p>Sets from before 2016 use a plain TCP remote-control protocol on port 55000
+instead of the Tizen WebSocket API. The <code>samsung</code> backend speaks both: set
+<code>TV_SAMSUNG_PROTOCOL=legacy</code> for those TVs. The TV asks once, on screen,
+whether to allow the remote; approve it for <code>TVPowerSync</code>. Legacy sets use
+<code>KEY_POWEROFF</code> (Tizen renamed it to <code>KEY_POWER</code>), stop answering on their
+control port in standby, and cannot be woken through this API — Wake-on-LAN and
+HDMI-CEC remain the wake paths. The protocol implementation is adapted from
+<a href="https://github.com/Ape/samsungctl"><code>samsungctl</code></a>; see
+<a href="https://github.com/mystica555/TVPowerSync/blob/master/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>.</p>
 <p>Set <code>TV_IP</code> to the device and <code>TV_MAC</code> for Wake-on-LAN. LG and Vizio use
 their local API for state and standby, but wake a fully sleeping TV through
 WoL or CEC, so <code>TV_MAC</code> is required for reliable power-on. For a streaming box
@@ -638,6 +648,16 @@ instead of the TV it is plugged into.</p>
 <td style="text-align: left;"><code>TV_BACKEND</code></td>
 <td style="text-align: left;"><code>samsung</code></td>
 <td style="text-align: left;"><code>cec</code>, <code>samsung</code>, <code>roku</code>, <code>androidtv</code>, <code>firetv</code>, <code>lg</code> or <code>vizio</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_SAMSUNG_PROTOCOL</code></td>
+<td style="text-align: left;"><code>ws</code></td>
+<td style="text-align: left;">Samsung control API: <code>ws</code> (Tizen) or <code>legacy</code> (pre-2016 TCP)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TV_SAMSUNG_PORT</code></td>
+<td style="text-align: left;"><code>8001</code> / <code>55000</code></td>
+<td style="text-align: left;">Samsung network-control port; the default follows <code>TV_SAMSUNG_PROTOCOL</code> (<code>8001</code> Tizen, <code>55000</code> legacy)</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>CEC_DEVICE</code></td>
@@ -776,9 +796,10 @@ parse_drm_info<span class="w">       </span><span class="c1"># Summarize DRM GPU
 <h2 id="caveats">Caveats<a class="headerlink" href="#caveats" title="Link to this section">#</a></h2>
 <ul>
 <li>The watchdog's TCP fallback assumes the TV closes the backend's control port
-  in standby (for example port <code>8001</code> on Samsung). If a firmware update keeps it
-  open, CEC remains the authoritative state source (the daemon queries CEC when
-  the port is closed, and reports <code>on</code> otherwise).</li>
+  in standby (for example the Samsung control port, <code>8001</code> on Tizen or <code>55000</code>
+  on legacy). If a firmware update keeps it open, CEC remains the authoritative
+  state source (the daemon queries CEC when the port is closed, and reports <code>on</code>
+  otherwise).</li>
 <li>A system suspend can begin before the asynchronous sleep worker finishes. The
   daemon still issues the command as early as possible, but logind does not wait
   for <code>PrepareForSleep</code> handlers.</li>
@@ -796,10 +817,12 @@ parse_drm_info<span class="w">       </span><span class="c1"># Summarize DRM GPU
 <h2 id="license">License<a class="headerlink" href="#license" title="Link to this section">#</a></h2>
 <p>TVPowerSync is licensed under the BSD 3-Clause License. See
 <a href="https://github.com/mystica555/TVPowerSync/blob/master/LICENSE">LICENSE</a> for the
-full text.</p>
+full text. The pre-Tizen Samsung protocol in <code>tvlib.py</code> is adapted from
+<code>samsungctl</code> (MIT, Copyright (c) 2014 Lauri Niskanen); the upstream license text
+is reproduced in <a href="https://github.com/mystica555/TVPowerSync/blob/master/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>.</p>
       </div>
       <footer class="doc-footer">
-        <p class="foot-note">Generated from <a href="README.md">README.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.4</p>
+        <p class="foot-note">Generated from <a href="README.md">README.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.5</p>
         <a class="next-card" href="ARCHITECTURE.html"><span class="next-kicker">Read next</span><span class="next-title">Architecture &amp; technical reference</span><span class="next-meta">Topology, protocols, state machine, edge cases</span></a>
       </footer>
     </article>
