@@ -136,10 +136,12 @@ class TVPowerSyncDaemon:
         # already been transmitted cannot be retracted by a wake intent, so
         # the wake path waits these out instead of trusting a stale "on".
         self._sleep_inflight = 0
+        self._wake_since_last_off = False
         self._last_wake_requested = 0.0
         self._last_wake_ok = 0.0
         self._last_source_reassert = 0.0
         self._last_video_retrain = 0.0
+        self._source_reassert_cancel: threading.Event | None = None
         self._offline_streak = 0
         self._watchdog_running = False
 
@@ -149,6 +151,7 @@ class TVPowerSyncDaemon:
         self._pending_trigger = ""
         self._panel_on_timeout_id = 0
         self._pending_panel_on_reason = ""
+        self._panel_on_cancel: threading.Event | None = None
 
         self.uevent_socket = None
         self.setup_uevent_listener()
@@ -197,8 +200,14 @@ class TVPowerSyncDaemon:
                     return
                 if self.read_external_display_status() != "connected":
                     return
+                with self._intent_lock:
+                    start_seq = self._intent_seq
                 tv_state = self.backend.power_state()
                 log.info("Initial TV power state: %s", tv_state)
+                if self.is_locked or not self._still_wants_wake(
+                    start_seq, require_lid_open=False
+                ):
+                    return
                 if tv_state in ("on", "to-on") and not tvlib.external_edid_present():
                     log.warning(
                         "TV reports '%s' at startup but the external display "
@@ -449,27 +458,42 @@ class TVPowerSyncDaemon:
         self.dpms_timer_id = GLib.timeout_add(interval_ms, self.on_dpms_poll)
         log.debug("DPMS poll interval set to %dms", interval_ms)
 
-    def _schedule_panel_wake(self, reason: str) -> None:
+    def _cancel_panel_wake_events(self) -> None:
+        with self._state_lock:
+            if self._panel_on_cancel is not None:
+                self._panel_on_cancel.set()
+                self._panel_on_cancel = None
+
+    def _schedule_panel_wake(self, reason: str) -> threading.Event:
         """Debounce a panel On so a DPMS bounce cannot start a full wake."""
         self._cancel_panel_wake()
+        cancel = threading.Event()
+        with self._state_lock:
+            self._panel_on_cancel = cancel
         self._pending_panel_on_reason = reason
         self._panel_on_timeout_id = GLib.timeout_add(
-            PANEL_ON_SETTLE_MS, self._on_panel_on_settled
+            PANEL_ON_SETTLE_MS, self._on_panel_on_settled, cancel
         )
+        return cancel
 
     def _cancel_panel_wake(self) -> None:
         if self._panel_on_timeout_id:
             GLib.source_remove(self._panel_on_timeout_id)
             self._panel_on_timeout_id = 0
         self._pending_panel_on_reason = ""
+        self._cancel_panel_wake_events()
 
-    def _on_panel_on_settled(self) -> bool:
+    def _on_panel_on_settled(self, cancel: threading.Event) -> bool:
         self._panel_on_timeout_id = 0
         reason = self._pending_panel_on_reason
         self._pending_panel_on_reason = ""
+        with self._state_lock:
+            if self._panel_on_cancel is cancel:
+                self._panel_on_cancel = None
         # The panel may have flipped back off in the meantime (the locker does
-        # this when it re-asserts DPMS after blanking).
-        if self.read_hardware_dpms() != "On":
+        # this when it re-asserts DPMS after blanking), or a sleep may have
+        # cancelled the wake.
+        if cancel.is_set() or self.read_hardware_dpms() != "On":
             log.info("[*] Panel On transition was transient; leaving TV power unchanged.")
             return False
         self.handle_screen_on(reason)
@@ -485,13 +509,17 @@ class TVPowerSyncDaemon:
                 self._cancel_panel_wake()
                 self.handle_screen_off("Laptop display DPMS went Off (hardware)")
             elif current == "On":
-                self._schedule_panel_wake("Laptop display DPMS went On (hardware)")
+                early_cancel = self._schedule_panel_wake(
+                    "Laptop display DPMS went On (hardware)"
+                )
                 # Start the TV booting the moment the panel comes back, not
                 # 800ms later. A magic packet is harmless wherever the TV is
                 # in its cycle and can save the entire settle wait.
                 if self.read_external_display_status() == "connected":
                     threading.Thread(
-                        target=self._early_wake_hint, daemon=True
+                        target=self._early_wake_hint,
+                        args=(early_cancel,),
+                        daemon=True,
                     ).start()
 
         if self.uevent_socket is None:
@@ -501,7 +529,7 @@ class TVPowerSyncDaemon:
                 self.check_external_display_transition("Periodic fallback poll")
         return True
 
-    def _early_wake_hint(self) -> None:
+    def _early_wake_hint(self, cancel: threading.Event) -> None:
         """Start the set before the debounce when it is known to be asleep.
 
         The magic packet alone never boots this TV, so IMAGE_VIEW_ON is what
@@ -510,19 +538,46 @@ class TVPowerSyncDaemon:
         sleep is still on the wire; every other trigger waits for the debounce
         so a transient DPMS bounce cannot boot the TV for nothing.
         """
-        self.backend.prewake(None)
+        if cancel.is_set() or self.last_hw_dpms != "On":
+            return
+        self.backend.prewake(cancel)
+        if cancel.is_set() or self.last_hw_dpms != "On":
+            return
         elapsed = self._recent_off_elapsed()
         if (
             elapsed is not None
             and elapsed < OFF_GUARD_SECONDS
             and not self._sleep_in_flight()
         ):
+            with self._state_lock:
+                if cancel.is_set():
+                    return
+                self._wake_since_last_off = True
             log.info(
                 "[*] TV is known to be in standby (%.1fs); sending CEC "
                 "image-view-on before the debounce.",
                 elapsed,
             )
-            self.backend.cec_prewake(None)
+            self.backend.cec_prewake(cancel)
+
+    def _still_wants_wake(
+        self, start_seq: int, require_lid_open: bool = True
+    ) -> bool:
+        """Return True when the session still expects the TV to be awake."""
+        if (
+            self.state != "awake"
+            or self.last_hw_dpms == "Off"
+            or (require_lid_open and self.last_lid_state != "open")
+            or self.read_external_display_status() != "connected"
+        ):
+            return False
+        with self._intent_lock:
+            if self._intent_seq != start_seq:
+                return False
+            with self._state_lock:
+                if self._sleep_inflight > 0 or self._commanded_off:
+                    return False
+        return True
 
     def on_watchdog_tick(self) -> bool:
         """Queue a watchdog check without ever blocking the event loop."""
@@ -554,6 +609,8 @@ class TVPowerSyncDaemon:
 
     def _watchdog_worker(self) -> None:
         try:
+            with self._intent_lock:
+                start_seq = self._intent_seq
             # A reachable control port alone is not enough: the TV can keep
             # it open while shutting down or while HDMI has no EDID.
             network_ok = bool(
@@ -567,13 +624,13 @@ class TVPowerSyncDaemon:
             if network_ok and tvlib.external_edid_present():
                 self._set_offline_streak(0)
                 return
-            if self.read_external_display_status() != "connected":
+            if not self._still_wants_wake(start_seq):
                 self._set_offline_streak(0)
                 return
 
             tv_state = self.backend.power_state()
-            # The dock may have been unplugged while the CEC query was running.
-            if self.read_external_display_status() != "connected":
+            # A lock, sleep, or undock may have happened while CEC ran.
+            if not self._still_wants_wake(start_seq):
                 self._set_offline_streak(0)
                 return
             if tv_state in ("on", "to-on") and not tvlib.external_edid_present():
@@ -685,10 +742,12 @@ class TVPowerSyncDaemon:
             if self._active_intent is intent:
                 self._active_intent = None
 
-    def _mark_commanded_off(self) -> None:
+    def _mark_commanded_off(self, reset_wake_flag: bool = True) -> None:
         with self._state_lock:
             self._commanded_off = True
             self._last_commanded_off = time.monotonic()
+            if reset_wake_flag:
+                self._wake_since_last_off = False
             # A wake after a real sleep is always legitimate, so the echo
             # guard must not apply across it.
             self._last_wake_ok = 0.0
@@ -700,14 +759,18 @@ class TVPowerSyncDaemon:
     def _mark_wake_requested(self) -> None:
         with self._state_lock:
             self._last_wake_requested = time.monotonic()
+            self._wake_since_last_off = True
 
     def _commanded_off_recently(self, window: float = 12.0) -> bool:
         with self._state_lock:
-            # A wake attempt voids the duplicate-off guard: if the TV was woken
-            # (or a wake was cut short before it could clear the flag), the next
-            # panel-off has to re-send standby instead of being dropped as a
-            # duplicate of the command that the wake just undid.
-            if self._last_wake_requested > self._last_commanded_off:
+            # A wake attempt (including an early CEC pre-wake) voids the
+            # duplicate-off guard: if the TV was woken (or a wake was cut short
+            # before it could clear the flag), the next panel-off has to re-send
+            # standby instead of being dropped as a duplicate.
+            if (
+                self._wake_since_last_off
+                or self._last_wake_requested > self._last_commanded_off
+            ):
                 return False
             return (
                 self._commanded_off
@@ -724,15 +787,23 @@ class TVPowerSyncDaemon:
         with self._state_lock:
             return self._sleep_inflight > 0
 
+    def _cancel_source_reassert(self) -> None:
+        with self._state_lock:
+            if self._source_reassert_cancel is not None:
+                self._source_reassert_cancel.set()
+                self._source_reassert_cancel = None
+            self._last_source_reassert = 0.0
 
     def request_power_off(self, reason: str, undock: bool | None = None) -> None:
-        """Cancel any in-flight wake and put the TV to sleep."""
+        """Cancel any in-flight wake or post-wake reassert and put the TV to sleep."""
         with self._intent_lock:
             intent = self._new_intent_locked("off")
-        with self._state_lock:
-            # Registered before the worker starts, so a wake that arrives
-            # while the standby is already on the wire knows to wait for it.
-            self._sleep_inflight += 1
+            self._cancel_panel_wake_events()
+            self._cancel_source_reassert()
+            with self._state_lock:
+                # Registered before the worker starts, so a wake that arrives
+                # while the standby is already on the wire knows to wait for it.
+                self._sleep_inflight += 1
         if undock is None:
             undock = self.read_external_display_status() != "connected"
         threading.Thread(
@@ -800,7 +871,7 @@ class TVPowerSyncDaemon:
                 return
             if tv_state in ("standby", "to-standby"):
                 log.info("[*] TV is already in %s. Skipping power toggle.", tv_state)
-                self._mark_commanded_off()
+                self._mark_commanded_off(reset_wake_flag=not cancel.is_set())
                 return
 
             if connected and not undock:
@@ -819,7 +890,7 @@ class TVPowerSyncDaemon:
                 reason=reason,
                 should_abort=should_abort,
             ):
-                self._mark_commanded_off()
+                self._mark_commanded_off(reset_wake_flag=not cancel.is_set())
                 log.info("[*] TV sleep command delivered (%s).", reason)
                 return
             if cancel.is_set():
@@ -1117,12 +1188,27 @@ class TVPowerSyncDaemon:
             log.warning(
                 "%s active-source command did not succeed.", self.backend.name
             )
-        if retry_source:
-            self._schedule_source_reassert(connector, retrain=retrain)
+        if retry_source and not cancel.is_set():
+            self._schedule_source_reassert(
+                connector, cancel=cancel, retrain=retrain
+            )
+
+    def _source_reassert_active(self, cancel: threading.Event) -> bool:
+        if cancel.is_set() or self._keepalive_stop.is_set():
+            return False
+        if self.state != "awake" or self.last_hw_dpms == "Off":
+            return False
+        if self.read_external_display_status() != "connected":
+            return False
+        with self._state_lock:
+            if self._sleep_inflight > 0 or self._commanded_off:
+                return False
+        return True
 
     def _schedule_source_reassert(
         self,
         connector: str | None,
+        cancel: threading.Event | None = None,
         delays: tuple[float, ...] = (1.0, 2.5, 4.0),
         retrain: bool = False,
     ) -> None:
@@ -1134,34 +1220,63 @@ class TVPowerSyncDaemon:
         actually act on it: the first retry is deliberately early (the port
         opens while the set is still booting, and a 3s first retry was what
         the picture waited on), with later retries covering a slower boot.
+
+        Bound to its own cancellation event so a manual sleep/off immediately
+        aborts pending retries instead of routing/waking the TV after standby.
         """
-        with self._state_lock:
-            now = time.monotonic()
-            if now - self._last_source_reassert < 2.0:
+        with self._intent_lock:
+            if cancel is not None and cancel.is_set():
                 return
-            self._last_source_reassert = now
+            active = self._active_intent
+            if active is not None and active.kind == "off":
+                return
+            with self._state_lock:
+                now = time.monotonic()
+                if (
+                    self._source_reassert_cancel is not None
+                    and not self._source_reassert_cancel.is_set()
+                    and now - self._last_source_reassert < 2.0
+                ):
+                    return
+                if self._source_reassert_cancel is not None:
+                    self._source_reassert_cancel.set()
+                reassert_cancel = threading.Event()
+                self._source_reassert_cancel = reassert_cancel
+                self._last_source_reassert = now
 
         def _worker() -> None:
-            for attempt, delay in enumerate(delays, start=1):
-                if self._keepalive_stop.wait(delay):
-                    return
-                if self.read_external_display_status() != "connected":
-                    return
-                if attempt == len(delays) and retrain:
-                    self._retrain_video_link(connector)
-                if self.backend.active_source(None):
-                    log.info(
-                        "[*] Re-asserted HDMI active source after the TV "
-                        "finished booting (attempt %d/%d).",
-                        attempt,
-                        len(delays),
-                    )
+            try:
+                for attempt, delay in enumerate(delays, start=1):
+                    if reassert_cancel.wait(delay) or self._keepalive_stop.is_set():
+                        return
+                    if not self._source_reassert_active(reassert_cancel):
+                        return
+                    if attempt == len(delays) and retrain:
+                        self._retrain_video_link(connector, cancel=reassert_cancel)
+                    if not self._source_reassert_active(reassert_cancel):
+                        return
+                    if (
+                        self.backend.active_source(reassert_cancel)
+                        and not reassert_cancel.is_set()
+                    ):
+                        log.info(
+                            "[*] Re-asserted HDMI active source after the TV "
+                            "finished booting (attempt %d/%d).",
+                            attempt,
+                            len(delays),
+                        )
+            finally:
+                with self._state_lock:
+                    if self._source_reassert_cancel is reassert_cancel:
+                        self._source_reassert_cancel = None
 
         threading.Thread(
             target=_worker, name="tv-source-reassert", daemon=True
         ).start()
 
-    def _retrain_video_link(self, connector: str | None) -> None:
+    def _retrain_video_link(
+        self, connector: str | None, cancel: threading.Event | None = None
+    ) -> None:
         """Power-cycle the DP output so the TV re-locks to the signal.
 
         After a fast standby/wake cycle the TV's HDMI receiver can stay out
@@ -1173,7 +1288,11 @@ class TVPowerSyncDaemon:
         """
         if not connector:
             return
+        if cancel is not None and cancel.is_set():
+            return
         with self._state_lock:
+            if cancel is not None and cancel.is_set():
+                return
             now = time.monotonic()
             if now - self._last_video_retrain < 60.0:
                 log.info("[*] Skipping the DP retrain; one ran less than 60s ago.")
@@ -1411,6 +1530,8 @@ def main() -> int:
         "D-Bus signals."
     )
     loop.run()
+    daemon._cancel_panel_wake_events()
+    daemon._cancel_source_reassert()
     daemon._keepalive_stop.set()
     daemon.backend.close()
     return 0

@@ -261,10 +261,10 @@ class TvBackend:
         return cancel is not None and cancel.is_set()
 
     def active_source(self, cancel: Optional[threading.Event] = None) -> bool:
-        """Re-assert this source (discrete IMAGE_VIEW_ON + ACTIVE_SOURCE)."""
+        """Re-assert this source (SET_STREAM_PATH + ACTIVE_SOURCE, no power-on)."""
         if self.cec is None:
             return True
-        return self.cec.wake(cancel)
+        return self.cec.active_source(cancel)
 
     def keepalive(self) -> bool:
         self._warm = True

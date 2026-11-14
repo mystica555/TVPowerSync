@@ -500,7 +500,7 @@ h2:hover .headerlink, h3:hover .headerlink, .headerlink:focus-visible { opacity:
       <nav class="toc" aria-label="Table of contents"><ul><li><a href="#1-system-overview-hardware-topology">1. System Overview &amp; Hardware Topology</a><ul class="toc-sub"><li><a href="#hardware-interface-stack">Hardware &amp; Interface Stack</a></li></ul></li><li><a href="#2-core-components">2. Core Components</a><ul class="toc-sub"><li><a href="#21-tv_power_daemonpy-tv-power-syncservice">2.1 <code>tv_power_daemon.py</code> (<code>tv-power-sync.service</code>)</a></li><li><a href="#22-boot_wolpy-tv-boot-wolservice">2.2 <code>boot_wol.py</code> (<code>tv-boot-wol.service</code>)</a></li><li><a href="#23-control_tvpy">2.3 <code>control_tv.py</code></a></li><li><a href="#24-parse_drm_infopy">2.4 <code>parse_drm_info.py</code></a></li><li><a href="#25-pair_samsung_tvpy">2.5 <code>pair_samsung_tv.py</code></a></li><li><a href="#26-udev70-cec-uaccessrules">2.6 <code>udev/70-cec-uaccess.rules</code></a></li><li><a href="#27-tvlibpy">2.7 <code>tvlib.py</code></a></li><li><a href="#28-tv_backendspy">2.8 <code>tv_backends.py</code></a></li><li><a href="#29-pair_lg_tvpy">2.9 <code>pair_lg_tv.py</code></a></li><li><a href="#210-pair_vizio_tvpy">2.10 <code>pair_vizio_tv.py</code></a></li></ul></li><li><a href="#3-operational-workflows">3. Operational Workflows</a><ul class="toc-sub"><li><a href="#31-decisive-wake-_do_decisive_wake">3.1 Decisive Wake (<code>_do_decisive_wake</code>)</a></li><li><a href="#32-sleep-_power_off_worker">3.2 Sleep (<code>_power_off_worker</code>)</a></li><li><a href="#33-screen-off-lock">3.3 Screen Off / Lock</a></li><li><a href="#34-suspend-resume">3.4 Suspend / Resume</a></li><li><a href="#35-watchdog-backoff">3.5 Watchdog Backoff</a></li></ul></li><li><a href="#4-event-flow-summary">4. Event Flow Summary</a></li><li><a href="#5-configuration">5. Configuration</a></li></ul></nav>
       <p class="side-foot">
         Rendered from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a><br>
-        TVPowerSync v1.1.5
+        TVPowerSync v1.1.6
       </p>
     </aside>
 
@@ -547,15 +547,19 @@ WebSocket and <code>kscreen-doctor</code> operation runs in a worker thread.</p>
 
 <ul>
 <li>Creating a new intent increments <code>seq</code> and sets the previous intent's
-  <code>cancel</code> event.</li>
+  <code>cancel</code> event. Sleep intents (and daemon shutdown) also cancel pending
+  panel-on wake hints/debounce work and any scheduled post-wake source-reassert
+  or DP-retrain thread.</li>
 <li>Workers check <code>cancel</code> before each side effect: before a CEC query, before
-  each WoL burst, before a WebSocket key, between wake-verification attempts.</li>
+  each WoL burst, before a WebSocket key, between wake-verification attempts,
+  and before post-wake routing or link-retrain retries.</li>
 <li>The CEC controller re-checks cancellation <em>inside</em> its process lock, so a
   superseded intent cannot transmit a stale command after waiting for the
   adapter.</li>
 <li>Duplicate ON requests are ignored while an ON intent is active; duplicate OFF
-  requests are absorbed by the 12-second cooldown and the pre-flight CEC state
-  query.</li>
+  requests are absorbed by the 12-second cooldown (cleared by any wake request or
+  early <code>IMAGE_VIEW_ON</code> pre-wake, and re-armed only by uncancelled sleeps) and
+  the pre-flight CEC state query.</li>
 </ul>
 <p>This replaces the previous <code>abort_wake</code> boolean, which conflated “cancel the
 wake” with “sleep now” and could not stop an in-flight sleep retry.</p>
@@ -620,8 +624,11 @@ listener is unavailable. The lid is read once at startup and never polled.</p>
    - Probes the selected backend's control port first (no subprocess). Only
      when the port is closed does it query CEC.
    - A CEC <code>standby</code>/<code>to-standby</code> reading wakes immediately; <code>offline</code> requires
-     two consecutive checks. The dock state is re-read after the query so an
-     unplug during the check cannot trigger a false wake.
+     two consecutive checks. After the blocking query returns, both the watchdog
+     and startup reconciliation re-check the intent sequence and wake
+     preconditions (awake intent, panel DPMS <code>On</code>, dock connected, lid open) so a
+     sleep, screen-off, lid close or unplug during the check cannot trigger a
+     stale wake.
    - Failed wake attempts apply <a href="#35-watchdog-backoff">exponential backoff</a> (60s, 120s, 240s, ... up to
      900s). Backoff resets on dock connect, DPMS-on, lid-open or unlock.</p>
 </li>
@@ -661,12 +668,15 @@ fallback.</p>
 <h3 id="28-tv_backendspy">2.8 <code>tv_backends.py</code><a class="headerlink" href="#28-tv_backendspy" title="Link to this section">#</a></h3>
 <p>Vendor power policy behind a single interface:</p>
 <div class="highlight"><pre><span></span><code>power_state(cancel, allow_network_fallback) -&gt; on | standby | to-on | to-standby | offline
-prewake(cancel) -&gt; early WoL hint before any state query
+prewake(cancel) / cec_prewake(cancel) -&gt; early WoL / IMAGE_VIEW_ON hint
 wake(cancel) / nudge(cancel) -&gt; one full attempt / a cheap repeat
 standby(cancel, undock, reason, should_abort) -&gt; delivered?
 active_source(cancel) / keepalive() / close()
 </code></pre></div>
 
+<p><code>active_source(cancel)</code> delegates to <code>CecController.active_source(cancel)</code>
+(<code>SET_STREAM_PATH</code> + <code>ACTIVE_SOURCE</code> only, without <code>IMAGE_VIEW_ON</code>), so a
+routing call never powers on a TV that is entering standby.</p>
 <p><code>TvBackend</code> supplies the CEC + WoL baseline; <code>CecBackend</code> is the vendor-neutral
 choice. <code>SamsungBackend</code> adds the Samsung remote API — the Tizen WebSocket, or
 the pre-2016 TCP protocol on port 55000 (or <code>TV_SAMSUNG_PORT</code>) when
@@ -714,11 +724,16 @@ its own wake command and readiness probe.</p>
    the daemon itself commanded standby and no sleep worker is still on the
    wire, also send <code>IMAGE_VIEW_ON</code> right there: the magic packet alone does not
    boot this set, and otherwise the debounce sits between the mouse and the red
-   light. Every other trigger waits out the debounce, so a transient DPMS
-   bounce cannot boot the TV for nothing. The full wake sequence repeats both,
-   which is harmless.</li>
-<li><strong>Clear the off cooldown</strong>, then ensure KDE DPMS is on <em>only if the panel is
-   currently off</em> (avoids spawning a Qt process on every wake).</li>
+   light. Both this hint and the debounce share the panel-on transition's
+   cancellation event, so a DPMS <code>Off</code> bounce or sleep intent aborts pending
+   hints instead of letting them land after standby starts; transmitting that
+   early <code>IMAGE_VIEW_ON</code> also marks a wake attempt since the last sleep so a
+   quick bounce back off still transmits standby. Every other trigger waits out
+   the debounce, so a transient DPMS bounce cannot boot the TV for nothing. The
+   full wake sequence repeats both, which is harmless.</li>
+<li><strong>Clear the off cooldown</strong> (both when a wake intent is created and before
+   any early <code>IMAGE_VIEW_ON</code> pre-wake), then ensure KDE DPMS is on <em>only if the
+   panel is currently off</em> (avoids spawning a Qt process on every wake).</li>
 <li><strong>Fast path</strong> — send a bare CEC <code>IMAGE_VIEW_ON</code> (no <code>ACTIVE_SOURCE</code>, which
    a booting set would drop), then query CEC when the TV was not recently
    commanded off. The image-view-on is harmless on an awake set and is what
@@ -732,11 +747,11 @@ its own wake command and readiness probe.</p>
    booting: it acknowledges CEC power-on but drops an <code>ACTIVE_SOURCE</code> sent in
    that window, so it takes the full sequence instead.</li>
 <li><strong>Wake</strong> — 5 WoL bursts (one <code>ip</code> enumeration cached for the whole sequence)
-   plus a single <code>cec-ctl --playback --to 0 --image-view-on --active-source</code>
+   plus a single <code>cec-ctl --playback --to 0 --image-view-on --set-stream-path ... --active-source ...</code>
    invocation.</li>
 <li><strong>Verification loop</strong> — up to 10 attempts, polling TCP every 0.5s for the
    first four attempts and every 1.5s afterwards. WoL is re-sent each round; the
-   blocking CEC wake is repeated only every third round so it does not delay the
+   blocking CEC wake is repeated every second round so it does not delay the
    polls. The loop exits immediately if the intent is cancelled or the dock is
    unplugged.</li>
 <li><strong>Video mode re-assert</strong> — <code>kscreen-doctor output.&lt;connector&gt;.mode.&lt;TV_MODE&gt;</code>,
@@ -756,8 +771,13 @@ its own wake command and readiness probe.</p>
    reports an active link with EDID. The retrain only runs when that wake had
    to wait for an in-flight sleep command (the race that produces the desync),
    and at most once a minute, so ordinary cold wakes never blank the screen.
-   A <code>to-on</code> reading in the verification loop is not treated as awake; only a
-   settled <code>on</code> (or a silent CEC with a reachable control port) ends the wake.</li>
+   The entire post-wake retry and retrain sequence runs under its own
+   cancellation event, which is cleared immediately by any sleep request or
+   daemon shutdown, re-checks intent state before retraining or re-asserting,
+   and sends only <code>SET_STREAM_PATH</code> + <code>ACTIVE_SOURCE</code> (never <code>IMAGE_VIEW_ON</code>) so
+   it can never wake a TV back out of standby. A <code>to-on</code> reading in the
+   verification loop is not treated as awake; only a settled <code>on</code> (or a silent
+   CEC with a reachable control port) ends the wake.</li>
 <li><strong><a href="#35-watchdog-backoff">Backoff</a></strong> — a failed, still-current wake doubles the delay (max 15min).
    Superseded wakes do not apply backoff.</li>
 </ol>
@@ -769,8 +789,13 @@ steps below are the Samsung backend's; Roku ECP, Android TV Remote, Fire TV
 ADB, LG webOS and Vizio SmartCast substitute their own switch-off command and
 confirmation.</p>
 <ol>
-<li><strong>Cancel any in-flight wake</strong> via the new intent.</li>
-<li><strong>Cooldown</strong> — skip if a sleep command was delivered less than 12s ago.</li>
+<li><strong>Cancel any in-flight wake</strong> via the new intent, also cancelling any
+   pending DPMS-on hint/settle work and any scheduled post-wake source-reassert
+   or DP-retrain thread.</li>
+<li><strong>Cooldown</strong> — skip if an uncancelled sleep command was delivered less than
+   12s ago and no wake request or early <code>IMAGE_VIEW_ON</code> pre-wake has occurred
+   since then. A cancelled sleep does not preserve cooldown suppression across an
+   intervening wake.</li>
 <li><strong>Pre-flight state</strong> — CEC query; if already <code>standby</code>/<code>to-standby</code>, mark the
    cooldown and stop.</li>
 <li><strong>Single path with delivery proof</strong> — when docked, send one CEC <code>STANDBY</code>.
@@ -810,11 +835,14 @@ The intent queue handles duplicate OFF requests; there is no longer a
 after 500ms instead of assuming the TV is already off.</p>
 <p>A panel <code>On</code> transition is debounced for 800ms before it wakes the TV. KDE's
 locker re-asserts DPMS around a blank/restore, and waking on that bounce meant
-the next sleep request was cancelled by the wake it had just started. The timer
-is dropped when the panel goes <code>Off</code> again, so a sleep request is never
-superseded by a bounce, while a genuine pointer or keyboard wake at the lock
-screen still starts the normal wake path. Startup reconciliation skips the wake
-while the session is locked, so a daemon restart cannot toggle the TV.</p>
+the next sleep request was cancelled by the wake it had just started. Both the
+debounce timer and any pre-debounce early wake hint share a per-transition
+cancellation event that is set as soon as the panel goes <code>Off</code> again (or when a
+sleep starts), so a bounce aborts pending hints and a sleep request is never
+superseded, while a genuine pointer or keyboard wake at the lock screen still
+starts the normal wake path. Startup reconciliation skips the wake while the
+session is locked and re-checks wake preconditions after probing TV power
+state, so a daemon restart or concurrent lock cannot toggle the TV.</p>
 <h3 id="34-suspend-resume">3.4 Suspend / Resume<a class="headerlink" href="#34-suspend-resume" title="Link to this section">#</a></h3>
 <p><code>PrepareForSleep(true)</code> creates a sleep intent. systemd does not wait for
 D-Bus signal handlers, so the command is best-effort (documented caveat).
@@ -1040,7 +1068,7 @@ shebangs to match, fails if no interpreter can import <code>dbus</code>/<code>gi
 any vendor library is missing.</p>
       </div>
       <footer class="doc-footer">
-        <p class="foot-note">Generated from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.5</p>
+        <p class="foot-note">Generated from <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> &middot; <a href="https://github.com/mystica555/TVPowerSync">GitHub</a> &middot; v1.1.6</p>
         <a class="next-card back" href="README.html"><span class="next-kicker">Back to</span><span class="next-title">Overview, configuration &amp; deployment</span><span class="next-meta">Features, environment variables, CLI usage</span></a>
       </footer>
     </article>
