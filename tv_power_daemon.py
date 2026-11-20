@@ -122,6 +122,9 @@ class TVPowerSyncDaemon:
         # that would turn the TV off while the user is working.
         self.state = "awake" if self.last_hw_dpms != "Off" else "asleep"
         self.is_locked = False
+        # Whether the panel actually powered off since the last wake. A lock
+        # alone does not put the TV in standby; only a DPMS Off/suspend does.
+        self._panel_was_off = self.last_hw_dpms == "Off"
 
         # Power intents (written by the main loop, read by workers).
         self._intent_lock = threading.Lock()
@@ -992,6 +995,13 @@ class TVPowerSyncDaemon:
         recent_off = sleep_race or (
             elapsed is not None and elapsed < OFF_GUARD_SECONDS
         )
+        # A wake from standby can leave an old DP link that the GPU still
+        # reports as active while the TV's HDMI receiver is not locked, but
+        # the retrain that recovers it disables the output and blanks the
+        # screen for several seconds. A clean wake (CEC "on" plus EDID) means
+        # the set re-locked on its own, so the retrain is kept out of the
+        # normal path and only runs when the verification loop never sees a
+        # ready set (see the end of this method).
         if elapsed is not None and elapsed < SETTLE_SECONDS:
             wait_time = SETTLE_SECONDS - elapsed
             log.info(
@@ -1076,6 +1086,11 @@ class TVPowerSyncDaemon:
                     "is routed after it finishes booting.",
                     tv_state,
                 )
+            else:
+                # CEC was silent during the boot, so the port opening is not
+                # proof that the HDMI receiver locked to us; the verification
+                # loop below decides whether the set actually came back.
+                log.debug("CEC answered '%s' before the wake sequence.", tv_state)
 
         log.info("[*] Sending %s wake sequence...", self.backend.name)
         if not self.backend.wake(cancel):
@@ -1129,9 +1144,7 @@ class TVPowerSyncDaemon:
                     "on" if current_state == "on" else "CEC silent, port open",
                     attempt,
                 )
-                self._assert_video(
-                    ext_conn, cancel, retry_source=True, retrain=sleep_race
-                )
+                self._assert_video(ext_conn, cancel, retry_source=True)
                 return True
             if current_state in ("on", "to-on") and not edid_ready:
                 log.info(
@@ -1160,6 +1173,42 @@ class TVPowerSyncDaemon:
                 return False
 
         log.warning("[!] Decisive wake did not detect the TV awake after 10 attempts.")
+        # The set never reported itself ready, so there is no working picture
+        # to protect: this is the one state where the destructive retrain can
+        # only help. It recovers a set whose HDMI receiver stayed out of sync
+        # while the GPU still reported an active link with EDID.
+        if cancel.is_set() or self.read_external_display_status() != "connected":
+            return False
+        self._retrain_video_link(ext_conn, cancel=cancel)
+        if cancel.is_set():
+            return False
+        for _ in range(3):
+            if cancel.wait(1.0):
+                return False
+            current_state = self.backend.power_state(
+                cancel=cancel, allow_network_fallback=False
+            )
+            if cancel.is_set():
+                return False
+            network_ready = bool(
+                self.backend.probe_port
+                and tvlib.is_tv_network_awake(
+                    self.config.tv_ip,
+                    timeout=0.4,
+                    port=self.backend.probe_port,
+                )
+            )
+            if tvlib.external_edid_present() and (
+                current_state == "on"
+                or (current_state == "offline" and network_ready)
+            ):
+                log.info(
+                    "[*] TV came back after the last-resort DP retrain. "
+                    "Syncing video stream and active source..."
+                )
+                self._assert_video(ext_conn, cancel, retry_source=True)
+                return True
+        log.warning("[!] TV still did not come back after the DP retrain.")
         return False
 
     def _assert_video(
@@ -1167,7 +1216,6 @@ class TVPowerSyncDaemon:
         connector: str | None,
         cancel: threading.Event,
         retry_source: bool = False,
-        retrain: bool = False,
     ) -> None:
         if cancel.is_set():
             return
@@ -1189,9 +1237,7 @@ class TVPowerSyncDaemon:
                 "%s active-source command did not succeed.", self.backend.name
             )
         if retry_source and not cancel.is_set():
-            self._schedule_source_reassert(
-                connector, cancel=cancel, retrain=retrain
-            )
+            self._schedule_source_reassert(connector, cancel=cancel)
 
     def _source_reassert_active(self, cancel: threading.Event) -> bool:
         if cancel.is_set() or self._keepalive_stop.is_set():
@@ -1209,8 +1255,7 @@ class TVPowerSyncDaemon:
         self,
         connector: str | None,
         cancel: threading.Event | None = None,
-        delays: tuple[float, ...] = (1.0, 2.5, 4.0),
-        retrain: bool = False,
+        delays: tuple[float, ...] = (1.0, 2.5, 4.0, 8.0, 12.0, 16.0),
     ) -> None:
         """Re-route the TV once it has finished booting.
 
@@ -1251,10 +1296,6 @@ class TVPowerSyncDaemon:
                         return
                     if not self._source_reassert_active(reassert_cancel):
                         return
-                    if attempt == len(delays) and retrain:
-                        self._retrain_video_link(connector, cancel=reassert_cancel)
-                    if not self._source_reassert_active(reassert_cancel):
-                        return
                     if (
                         self.backend.active_source(reassert_cancel)
                         and not reassert_cancel.is_set()
@@ -1283,8 +1324,9 @@ class TVPowerSyncDaemon:
         of sync while the GPU still reports an active link with EDID, leaving
         the set on "No Signal". Disabling and re-enabling the output forces a
         fresh link training and mode set; this is the sequence that recovers
-        it. It only runs on cold wakes, and the output is always re-enabled
-        before the mode is re-asserted.
+        it. It only runs after the verification loop has exhausted itself
+        without a ready set, so a working picture is never blanked, and the
+        output is always re-enabled before the mode is re-asserted.
         """
         if not connector:
             return
@@ -1334,6 +1376,7 @@ class TVPowerSyncDaemon:
     def handle_screen_off(self, reason: str) -> None:
         log.info("--> [OFF DETECTED] (%s)", reason)
         self.state = "asleep"
+        self._panel_was_off = True
 
         if "DPMS" in reason:
             log.info("[*] Locking session for idle DPMS display turn-off (autolock).")
@@ -1348,6 +1391,7 @@ class TVPowerSyncDaemon:
     def handle_screen_on(self, reason: str) -> None:
         log.info("--> [ON DETECTED] (%s)", reason)
         self.state = "awake"
+        self._panel_was_off = False
         self.backoff.reset()
 
         if self.read_external_display_status() == "connected":
@@ -1388,7 +1432,16 @@ class TVPowerSyncDaemon:
             self.update_dpms_timer(interval_ms=2000)
             if self.is_locked:
                 self.is_locked = False
-                self.handle_screen_on("KDE ScreenSaver Unlocked")
+                # Locking only changes the poll rate; the TV is put in
+                # standby when the panel goes DPMS Off. A short lock/unlock
+                # with the panel still on must not wake or re-sync the TV.
+                if self._panel_was_off or self.read_hardware_dpms() == "Off":
+                    self.handle_screen_on("KDE ScreenSaver Unlocked")
+                else:
+                    log.info(
+                        "[*] Session unlocked without a display power-off; "
+                        "leaving the TV untouched."
+                    )
             else:
                 log.info(
                     "[*] Session already unlocked; ignoring duplicate "

@@ -606,7 +606,8 @@ listener is unavailable. The lid is read once at startup and never polled.</p>
 </li>
 <li>
 <p><strong>KDE ScreenSaver (<code>org.freedesktop.ScreenSaver.ActiveChanged</code>)</strong>
-   - Switches the DPMS polling interval and drives unlock-time wake.
+   - Switches the DPMS polling interval and drives unlock-time wake only when
+     the display actually powered off.
    - Registration is retried every 5 seconds if the session bus is not ready
      when the user unit starts.</p>
 </li>
@@ -760,17 +761,20 @@ its own wake command and readiness probe.</p>
    survives mode-table changes. While the TV reports on without EDID (awake on
    another input), the verification loop re-sends the active source every round
    instead of only broadcasting WoL. Every successful wake also schedules the
-   same routing again 1s, 2.5s and 4s later, because a set that has just powered
-   on accepts CEC frames before its inputs are ready and would otherwise settle
-   on "No Signal" with the first, dropped <code>ACTIVE_SOURCE</code>. The first retry is
-   deliberately early: the control port opens while the set is still booting, so
-   a 3s first retry made the picture itself wait ~3s. The last repeat is
-   preceded by a DP link retrain (disable the output, re-enable it, then
-   re-assert the native mode), which recovers a TV whose HDMI receiver stayed
-   out of sync after a fast standby/wake cycle even though the GPU still
-   reports an active link with EDID. The retrain only runs when that wake had
-   to wait for an in-flight sleep command (the race that produces the desync),
-   and at most once a minute, so ordinary cold wakes never blank the screen.
+   same routing again 1s, 2.5s, 4s, 8s, 12s and 16s later, because a set that
+   has just powered on accepts CEC frames before its inputs are ready and would
+   otherwise settle on "No Signal" with the first, dropped <code>ACTIVE_SOURCE</code>. The
+   first retry is deliberately early: the control port opens while the set is
+   still booting, so a 3s first retry made the picture itself wait ~3s. The
+   first repeat after 8s stays a plain routing retry. A DP link retrain
+   (disable the output, re-enable it, then re-assert the native mode) recovers
+   a TV whose HDMI receiver stayed out of sync after a standby/wake cycle even
+   though the GPU still reports an active link with EDID, but the desync is
+   invisible from the GPU side and the retrain blanks a working picture for
+   several seconds. It therefore never runs on a wake that confirmed the set
+   over CEC with EDID: it is the last resort after the verification loop
+   exhausts (at most once a minute), and the wake only succeeds if the set
+   reports itself ready again once the output is back.
    The entire post-wake retry and retrain sequence runs under its own
    cancellation event, which is cleared immediately by any sleep request or
    daemon shutdown, re-checks intent state before retraining or re-asserting,
@@ -829,6 +833,9 @@ confirmation.</p>
 <code>XDG_SESSION_ID</code> when the trigger was idle DPMS, and creates a sleep intent.
 The TV is kept a mirror of the panel: a panel <code>On</code> at the lock screen wakes it
 so the password entry box is visible, and a panel <code>Off</code> puts it back to sleep.
+An unlock only wakes the TV when the panel actually went <code>Off</code> since the last
+wake; a short lock/unlock that never powers the display down leaves the TV
+untouched, so it cannot trigger a needless full wake and DP retrain.
 The intent queue handles duplicate OFF requests; there is no longer a
 “state is already asleep” early return that could permanently miss a command.</p>
 <p>At startup, if the panel is already <code>Off</code>, the daemon creates a sleep intent
